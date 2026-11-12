@@ -1,0 +1,31 @@
+{
+  "name": "home-stock",
+  "version": "1.0.0",
+  "private": true,
+  "description": "面向家庭、自托管的轻量库存助手：物品库存、购物清单、临期提醒与浪费统计",
+  "license": "MIT",
+  "author": "baoxinwen",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/baoxinwen/home-stock.git"
+  },
+  "homepage": "https://github.com/baoxinwen/home-stock#readme",
+  "keywords": [
+    "home",
+    "inventory",
+    "self-hosted",
+    "nestjs",
+    "vue3",
+    "sqlite",
+    "pwa"
+  ],
+  "packageManager": "pnpm@10.18.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "echo ok"
+  }
+}

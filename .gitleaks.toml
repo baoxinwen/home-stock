@@ -1,0 +1,21 @@
+# gitleaks 误报豁免：以下均为测试代码中的显式假值（非真实凭证）
+# - apps/e2e/helpers/env.ts：e2e 测试实例的固定口令常量（测试隔离实例）
+# - apps/web/src/App.spec.ts：单测 localStorage 假 token
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+[rules.allowlist]
+paths = [
+  '''apps/e2e/helpers/env\.ts''',
+  '''apps/web/src/App\.spec\.ts''',
+]
+
+[[allowlists]]
+description = "测试 fixture 假值（family-secret-01 / t-1234567890）"
+commits = []
+paths = [
+  '''apps/e2e/helpers/env\.ts''',
+  '''apps/web/src/App\.spec\.ts''',
+]

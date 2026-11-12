@@ -1,0 +1,49 @@
+services:
+  app:
+    # 双模式：优先拉取 GHCR 预构建镜像（docker compose pull）；
+    # image 改回 home-stock:local + `--build` 可回退本地构建
+    image: ghcr.io/baoxinwen/home-stock:latest
+    build: .
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - DATA_DIR=${DATA_DIR:-/data}
+      - BACKUP_DIR=${BACKUP_DIR:-/data/backups}
+      - BACKUP_INTERVAL=${BACKUP_INTERVAL:-0 2 * * *}
+      - BACKUP_KEEP=${BACKUP_KEEP:-14}
+      # 必填：访问口令（前端登录页输入；API 请求头/下载链接校验）
+      - ACCESS_TOKEN=${ACCESS_TOKEN:?ACCESS_TOKEN is required (set it in .env or shell)}
+    ports:
+      # 仅内网自托管时保持默认；配合 caddy 建 HTTPS 时建议改成 "127.0.0.1:3000:3000"
+      - "3000:3000"
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ---- 可选：Caddy 自动 HTTPS 反向代理（取消注释并配置 DOMAIN 后启用） ----
+  # caddy:
+  #   image: caddy:2
+  #   restart: unless-stopped
+  #   environment:
+  #     - DOMAIN=${DOMAIN:-home.example.com}
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #     - "443:443/udp"
+  #   volumes:
+  #     - ./Caddyfile:/etc/caddy/Caddyfile:ro
+  #     - caddy_data:/data
+  #     - caddy_config:/config
+  #   depends_on:
+  #     app:
+  #       condition: service_healthy
+
+# Caddy 持久化证书/配置（启用 caddy 时一起取消注释）
+# volumes:
+#   caddy_data:
+#   caddy_config:

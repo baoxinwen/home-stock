@@ -1,0 +1,349 @@
+:root {
+  /* 大厂质感分层令牌（2026-11-08 铁律 1）：canvas → surface → field 依次 +1~3% 明度，去边框 */
+  --color-canvas: #f5f5f3;
+  --color-surface: #fcfcfb;
+  --color-field: #f3f2ef;
+  --color-hover: #f0efec;
+  --color-border: #eaeaea; /* 仅个别 hairline 分隔线使用，卡片/输入框/按钮一律不用 */
+  --color-line: #f2f0ec; /* 列表行分隔线 */
+  --color-track: #efece6; /* 条形图底轨 */
+  --color-row-expiring: #fffdf6; /* 临期行底色 */
+  --color-row-expired: #fffafa; /* 过期行底色 */
+  --color-tabbar: rgba(245, 245, 243, 0.96);
+  --color-ink: #111111;
+  --color-ink-hover: #2a2a28; /* ink 实底 hover */
+  --color-on-ink: #ffffff; /* ink 实底上的文字/图标 */
+  --color-text: #2f3437;
+  --color-muted: #6a6965; /* WCAG AA：≥4.5:1（field/canvas/surface/tone-gray 上实测过线） */
+  --ring-outer: rgba(17, 17, 17, 0.08); /* 铁律 2 双环外环 */
+  --tone-red-bg: #fdebec;
+  --tone-red-fg: #9f2f2d;
+  --tone-yellow-bg: #fbf3db;
+  --tone-yellow-fg: #956400;
+  --tone-green-bg: #edf3ec;
+  --tone-green-fg: #346538;
+  --tone-blue-bg: #e1f3fe;
+  --tone-blue-fg: #1f6c9f;
+  --bar-blue: #a9cfe8;
+  --bar-green: #b7cdb7;
+  --bar-yellow: #e6d39b;
+  --bar-red: #e3b3b1;
+  /* 间距/圆角最小 token（体检表 P2-9 沉淀；新改动一律引用，存量小步收敛） */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --radius-s: 6px;
+  --radius-m: 8px;
+  --radius-l: 12px;
+  --radius-pill: 999px;
+  --control-h: 28px; /* 小型交互控件统一高度（≥24 达标线 + 裕量） */
+  /* 铁律 3 字重变量：暗色主题整体 -40 防白字发胖 */
+  --fw-normal: 400;
+  --fw-semibold: 600;
+  color-scheme: light;
+}
+
+/* ---------- 暗色主题（铁律 1 暗色分层 #0b0b0a/#151515/#1a1a19/#20201e） ---------- */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-canvas: #0b0b0a;
+  --color-surface: #151515;
+  --color-field: #1a1a19;
+  --color-hover: #20201e;
+  --color-border: #262624;
+  --color-line: #262624;
+  --color-track: #262624;
+  --color-row-expiring: #241f12;
+  --color-row-expired: #231412;
+  --color-tabbar: rgba(15, 15, 14, 0.96);
+  /* ink 翻转为亮色强调面（实底按钮/当前柱），on-ink 反转为深字 */
+  --color-ink: #e9e8e4;
+  --color-on-ink: #111111;
+  --color-text: #d6d5d1;
+  --color-muted: #8f8e8a;
+  --ring-outer: rgba(233, 232, 228, 0.1);
+  --tone-red-bg: #2e1a19;
+  --tone-red-fg: #e8a29d;
+  --tone-yellow-bg: #2e2614;
+  --tone-yellow-fg: #dfc06b;
+  --tone-green-bg: #1b2a1c;
+  --tone-green-fg: #92c69b;
+  --tone-blue-bg: #16262e;
+  --tone-blue-fg: #7ec1e8;
+  --bar-blue: #7fb3d8;
+  --bar-green: #8fbf96;
+  --bar-yellow: #d8b96a;
+  --bar-red: #d99895;
+  --color-ink-hover: #d5d4d0;
+  /* 铁律 3 暗色补偿：字重整体 -40 */
+  --fw-normal: 360;
+  --fw-semibold: 560;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  /* 滚动条常驻（宽度锁）：页面切换时内容高度变化不再引起视口宽度跳变。
+     注：本环境 Chromium 对 html 的 scrollbar-gutter: stable 未按预期预留槽位，
+     故用 overflow-y: scroll 硬保证（滚动条不可滚时只显示空轨道）。 */
+  overflow-y: scroll;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--color-canvas);
+  color: var(--color-text);
+  font-family: 'SF Pro Display', -apple-system, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei',
+    sans-serif;
+  line-height: 1.6;
+  font-size: 15px;
+  font-weight: var(--fw-normal);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+/* 铁律 8 防孤字：正文断行优先收进孤字 */
+p,
+li,
+.hint,
+.panel-sub {
+  text-wrap: pretty;
+}
+
+/* 铁律 1 输入基底：统一 field 面、无边框（分层靠明度，卡片上的输入更沉一档） */
+input:not([type='checkbox']):not([type='radio']):not([type='range']),
+select,
+textarea {
+  background: var(--color-field);
+  border: none;
+  border-radius: 8px;
+  color: var(--color-text);
+  font: inherit;
+}
+
+/* 铁律 2 聚焦：不加 outline，双环 box-shadow 造咬合感 */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 1.2px var(--color-ink),
+    0 0 0 4.5px var(--ring-outer);
+}
+
+/* 铁律 5 行内图标对齐中心 */
+button svg,
+.topnav-item svg,
+.inline-icon {
+  vertical-align: -0.125em;
+}
+
+/* 体检表 P0-1：按钮基底无边框（codemod 删边框后 UA 默认 2px outset 击穿了去边框语言） */
+button {
+  border: none;
+}
+
+/* 体检表 P1-5：ink 实底按钮 hover / 按压态（铁律 9：按压 scale 无位移）
+   注：.mark-all 已降级为通知工具行轻 pill（2026-11-11 审查 T-1），不再走 ink 实底 hover，组内移除 */
+.primary-btn,
+.add-btn,
+.topnav-add,
+.fab,
+.add-submit {
+  transition: background-color 150ms ease-out, transform 120ms ease;
+}
+.primary-btn:hover:not(:disabled),
+.add-btn:hover,
+.topnav-add:hover,
+.fab:hover,
+.add-submit:hover {
+  background: var(--color-ink-hover);
+}
+.primary-btn:active:not(:disabled),
+.add-btn:active,
+.topnav-add:active,
+.fab:active,
+.add-submit:active {
+  transform: scale(0.98);
+}
+
+/* 体检表 P2-7：键盘导航统一双环（按钮此前是 UA 蓝框） */
+button:focus-visible,
+a:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 1.2px var(--color-ink),
+    0 0 0 4.5px var(--ring-outer);
+  border-radius: var(--radius-s);
+}
+
+/* 体检表 P2-8：Chrome autofill 蓝底覆盖 field 分层 */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--color-field) inset;
+  -webkit-text-fill-color: var(--color-text);
+  transition: background-color 9999s ease-out;
+}
+
+h1,
+h2,
+h3 {
+  /* 体检表 P2-10：移除从未加载的 Newsreader（声明与渲染不符），系统衬线族直接兜底 */
+  font-family: Georgia, 'Songti SC', 'Noto Serif SC', serif;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.01em;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.app-shell {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px 16px calc(64px + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 768px) {
+  .app-shell {
+    max-width: 720px;
+  }
+}
+
+/* 底部导航（面层化：与 canvas 靠明度分层，无边框） */
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--color-tabbar);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
+  z-index: 20;
+}
+.tabbar-inner {
+  display: flex;
+  gap: 4px;
+}
+.tab-item {
+  background: none;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  color: var(--color-muted);
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 120ms ease;
+}
+.tab-item:active {
+  transform: scale(0.98);
+}
+.tab-item.router-link-active {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+/* 页面标题 */
+.page-title {
+  font-size: 22px;
+  margin: 0;
+}
+
+/* 滚动入场：translateY(12px)+opacity 600ms + 交错延迟（delay 由内联 style 提供） */
+.enter {
+  animation: enter-in 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes enter-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .enter {
+    animation: none;
+  }
+}
+
+
+/* 顶部导航骨架（PC≥1024px，App.vue 分支渲染；移动端不受影响）—— 仪表盘方向 2026-11-08 */
+.topnav-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.topnav-main {
+  flex: 1;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 32px 48px;
+  box-sizing: border-box;
+  min-width: 0;
+}
+/* 页面内容列的通用宽度约束（各页面 wb-page） */
+.wb-page {
+  max-width: 1080px;
+}
+@media (min-width: 1280px) {
+  .wb-page {
+    max-width: 1200px;
+  }
+}
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* 底部 tabbar 6 项（总览/库存/通知/清单/统计/设置）：窄屏收紧内边距 */
+@media (max-width: 420px) {
+  .tab-item {
+    padding: 8px 9px;
+    font-size: 12px;
+  }
+}
+
+/* 动效全局兜底：流式打字 / 微弹等逐帧动画尊重系统减弱动态偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .stream-char,
+  .toggle-pop {
+    animation: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+  }
+}
+
+/* D-10 移动 tabbar 徽章（与 PC 顶导航同源） */
+.tab-badge {
+  font-size: 10px;
+  line-height: 1;
+  border-radius: var(--radius-pill);
+  padding: 2px 5px;
+  margin-left: 2px;
+  vertical-align: 2px;
+}
+.tab-badge-red {
+  background: var(--tone-red-bg);
+  color: var(--tone-red-fg);
+}
+.tab-badge-blue {
+  background: var(--tone-blue-bg);
+  color: var(--tone-blue-fg);
+}

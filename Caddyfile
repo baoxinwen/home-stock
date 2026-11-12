@@ -1,0 +1,11 @@
+# 可选反向代理：启用 docker-compose.yml 的 caddy 段后，
+# 把 DOMAIN 设为你的域名（A/AAAA 已解析到 NAS），Caddy 会自动申请续期 HTTPS 证书。
+#
+#   DOMAIN=stock.example.com docker compose up -d
+#
+# 若只在局域网使用，也可不启用 caddy，直接访问 http://<nas-ip>:3000。
+
+{$DOMAIN:localhost} {
+	encode gzip
+	reverse_proxy app:3000
+}

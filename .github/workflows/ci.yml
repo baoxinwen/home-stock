@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          # C-M3：锚定与 package.json packageManager 一致的版本，避免 CI 与本地/Docker 行为分叉
+          version: 10.18.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint (placeholder)
+        run: echo ok
+
+      # shared/server/web 编译 + vue-tsc 类型检查（I-11）：契约漂移在 CI 中可见
+      - run: pnpm -r build
+
+      - run: pnpm -r test
+
+      # I-3：e2e 包不在 -r build/-r test 覆盖内（无 build/test 脚本），借 server 的
+      # typescript 做类型检查——shared 契约漂移与 e2e 内部类型错误在此可见
+      - name: Typecheck e2e
+        run: pnpm --filter @home-stock/server exec tsc -p ../../apps/e2e/tsconfig.json --noEmit
+
+      # 系统测试层（I-10）：真实 server + 双视口 Playwright（端口 3000 在 CI runner 空闲）。
+      # webServer.command 自带 build，此处的显式 pnpm -r build（I-11）让编译失败更早暴露。
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+        working-directory: apps/e2e
+
+      - name: E2E
+        run: pnpm --filter @home-stock/e2e test:e2e

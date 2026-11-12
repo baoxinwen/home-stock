@@ -1,0 +1,17 @@
+node_modules
+**/node_modules
+**/dist
+data
+**/data
+**/data-tmp*
+**/*.db
+**/*.db-shm
+**/*.db-wal
+.git
+.gitignore
+.env
+.worktrees
+.superpowers
+.superpowers-shots
+deploy-out-tmp
+*.log

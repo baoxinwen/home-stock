@@ -1,0 +1,26 @@
+{
+  "name": "@home-stock/web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vue-tsc --noEmit && vite build",
+    "dev": "vite",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@home-stock/shared": "workspace:*",
+    "vue": "^3.5.22",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.4",
+    "@vue/test-utils": "^2.5.1",
+    "happy-dom": "^21.0.4",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.7",
+    "vite-plugin-pwa": "^1.0.0",
+    "vitest": "^3.2.4",
+    "vue-tsc": "^3.1.3"
+  }
+}
