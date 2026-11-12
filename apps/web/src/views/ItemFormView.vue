@@ -168,11 +168,22 @@ async function submitAndAgain(): Promise<void> {
           >
             生产日期 + 保质期
           </button>
+          <button
+            type="button"
+            class="chip"
+            :class="{ active: form.expiryMode === 'none' }"
+            @click="form.expiryMode = 'none'"
+          >
+            长期存储
+          </button>
         </div>
         <label v-if="form.expiryMode === 'direct'" class="field">
           <span class="label">过期日期</span>
           <input v-model="form.expiryDate" type="date" />
         </label>
+        <p v-else-if="form.expiryMode === 'none'" class="computed-hint">
+          长期存储品（如酒、干货）不设保质期，不参与临期/过期提醒
+        </p>
         <div v-else class="field-row">
           <label class="field">
             <span class="label">生产日期</span>

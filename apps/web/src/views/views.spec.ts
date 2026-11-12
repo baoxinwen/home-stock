@@ -180,6 +180,32 @@ describe('ItemFormView', () => {
     const payload = vi.mocked(api.createItem).mock.calls[0][0];
     expect(payload.expiryDate).toBe('2026-02-15');
   });
+
+  it('「长期存储」档：不填过期日期可提交，payload.expiryDate 为 null', async () => {
+    vi.mocked(api.createItem).mockResolvedValue(makeItem({ expiryDate: null, effectiveExpiryDate: null }));
+    const router = await makeRouter('/items/new');
+    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    await flushPromises();
+
+    await wrapper.find('input[type="text"]').setValue('白酒');
+    await wrapper.findAll('button.chip').filter((b) => b.text().includes('长期存储'))[0].trigger('click');
+    await wrapper.find('form').trigger('submit');
+
+    expect(api.createItem).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(api.createItem).mock.calls[0][0].expiryDate).toBeNull();
+  });
+
+  it('日期档漏填拦截：direct 档空日期提交报错且不请求', async () => {
+    const router = await makeRouter('/items/new');
+    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    await flushPromises();
+
+    await wrapper.find('input[type="text"]').setValue('牛奶');
+    await wrapper.find('form').trigger('submit');
+
+    expect(api.createItem).not.toHaveBeenCalled();
+    expect(wrapper.find('.error-text').text()).toContain('请填写过期日期，或改选长期存储');
+  });
 });
 
 describe('ItemFormView 数量校验', () => {
@@ -189,6 +215,8 @@ describe('ItemFormView 数量校验', () => {
     const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
     await flushPromises();
     await wrapper.find('input[type="text"]').setValue('盐');
+    // 盐无保质期 → 切「长期存储」档（日期档空值现被校验拦截）
+    await wrapper.findAll('button.chip').filter((b) => b.text().includes('长期存储'))[0].trigger('click');
     await wrapper.find('input[type="number"]').setValue(0);
     await wrapper.find('form').trigger('submit');
     expect(api.createItem).toHaveBeenCalledTimes(1);
@@ -200,6 +228,7 @@ describe('ItemFormView 数量校验', () => {
     const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
     await flushPromises();
     await wrapper.find('input[type="text"]').setValue('盐');
+    await wrapper.findAll('button.chip').filter((b) => b.text().includes('长期存储'))[0].trigger('click');
     await wrapper.find('input[type="number"]').setValue('');
     await wrapper.find('form').trigger('submit');
     // v-model.number 空串 → ''；toPayload 应默认 1
@@ -209,6 +238,21 @@ describe('ItemFormView 数量校验', () => {
 });
 
 describe('ItemFormView 编辑态开封开关', () => {
+  it('编辑无过期日物品 → 「长期存储」档初始激活，日期输入不渲染', async () => {
+    vi.mocked(api.listItems).mockResolvedValue([makeItem({ expiryDate: null, effectiveExpiryDate: null, expiryStatus: 'none' })]);
+    vi.mocked(api.updateItem).mockResolvedValue(makeItem({}));
+    const router = await makeRouter('/items/1/edit');
+    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    await flushPromises();
+
+    const longChip = wrapper.findAll('button.chip').find((b) => b.text().includes('长期存储'))!;
+    expect(longChip.classes()).toContain('active');
+    // 编辑补日期：切回日期档后输入可见（限定过期方式分组，排除购买日期输入）
+    expect(wrapper.find('.expiry-group input[type="date"]').exists()).toBe(false);
+    await wrapper.findAll('button.chip').find((b) => b.text().includes('直接填'))!.trigger('click');
+    expect(wrapper.find('.expiry-group input[type="date"]').exists()).toBe(true);
+  });
+
   it('开启「已开封」后保存，PUT 带 opened:1（server 记录当日开封日）', async () => {
     vi.mocked(api.listItems).mockResolvedValue([makeItem({ opened: 0 })]);
     vi.mocked(api.updateItem).mockResolvedValue(makeItem({ opened: 1 }));
