@@ -42,6 +42,7 @@ describe('AppTopNav', () => {
     await flushPromises();
 
     const routerLinks = wrapper.findAllComponents(RouterLink);
+    // 2026-11-13 设置移出一级导航：导航 4 项目的地 + 右上齿轮（/settings）
     expect(routerLinks.map((l) => l.props('to'))).toEqual([
       '/',
       '/inventory',
@@ -54,8 +55,8 @@ describe('AppTopNav', () => {
       '库存',
       '清单',
       '统计',
-      '设置',
     ]);
+    expect(wrapper.find('.gear-btn').exists()).toBe(true);
   });
 
   it('铃铛显示未读徽章；点击弹出不关闭（面板逻辑在 NotificationPopover.spec）', async () => {

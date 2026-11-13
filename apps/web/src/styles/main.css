@@ -251,7 +251,9 @@ h3 {
   color: var(--color-ink);
   letter-spacing: 0.01em;
 }
-.mobile-bell {
+/* 铃铛/齿轮共享 ghost 图标钮（36px 圆形）；类名分开保选择器语义 */
+.mobile-bell,
+.mobile-gear {
   position: relative;
   width: 36px;
   height: 36px;
@@ -262,10 +264,12 @@ h3 {
   text-decoration: none;
   transition: background 150ms ease-out;
 }
-.mobile-bell:active {
+.mobile-bell:active,
+.mobile-gear:active {
   background: var(--color-hover);
 }
-.mobile-bell svg {
+.mobile-bell svg,
+.mobile-gear svg {
   width: 20px;
   height: 20px;
 }
@@ -279,6 +283,17 @@ h3 {
   border-radius: var(--radius-pill);
   background: var(--tone-red-bg);
   color: var(--tone-red-fg);
+}
+/* 铃铛+齿轮全局工具区（2026-11-13 设置收口齿轮） */
+.mobile-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+/* 齿轮当前页高亮（同铃铛 hover 语言） */
+.mobile-gear.router-link-active {
+  background: var(--color-hover);
+  color: var(--color-ink);
 }
 .tabbar-inner {
   display: flex;

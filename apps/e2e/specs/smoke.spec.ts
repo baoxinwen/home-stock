@@ -26,18 +26,21 @@ test('登录 → 总览首页渲染 → 导航切换', async ({ page }) => {
   await expect(page.locator('h1.page-title')).toHaveText('总览');
   await expect(page.locator('.kpi-card')).toHaveCount(4);
 
-  // 导航形态：desktop 顶部导航 5 项（通知收敛为铃铛，IA 轻量下拉）+ 当前项「总览」高亮 + 无底部 tab；
-  // mobile 2026-11-12 M-13 方案A：顶栏铃铛（通知收口）+ tabbar 5 项，与 PC 心智一致
+  // 导航形态：desktop 顶部导航 4 项（通知/设置收敛为铃铛/齿轮全局工具区）+ 当前项「总览」高亮 + 无底部 tab；
+  // mobile 同构：顶栏铃铛+齿轮 + tabbar 4 项（2026-11-13 设置移出一级导航）
   if (isDesktop) {
     await expect(page.locator('nav.tabbar')).toBeHidden();
-    await expect(page.locator('.topnav .topnav-item')).toHaveCount(5);
+    await expect(page.locator('.topnav .topnav-item')).toHaveCount(4);
     await expect(page.locator('.topnav .topnav-item.router-link-active')).toHaveText(/总览/);
+    await expect(page.locator('.topnav .bell-btn')).toBeVisible();
+    await expect(page.locator('.topnav .gear-btn')).toBeVisible();
     await expect(page.locator('.topnav-add')).toBeVisible();
   } else {
     await expect(page.locator('.topnav')).toHaveCount(0);
     await expect(page.locator('.mobile-topbar .mobile-bell')).toBeVisible();
+    await expect(page.locator('.mobile-topbar .mobile-gear')).toBeVisible();
     await expect(page.locator('nav.tabbar')).toBeVisible();
-    await expect(page.locator('nav.tabbar .tab-item')).toHaveCount(5);
+    await expect(page.locator('nav.tabbar .tab-item')).toHaveCount(4);
   }
   await shot(page, 'smoke-overview');
 

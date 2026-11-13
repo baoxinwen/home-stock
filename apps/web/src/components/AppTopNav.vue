@@ -1,8 +1,9 @@
 <script setup lang="ts">
 /**
  * 顶部导航（PC≥1024px 骨架，仪表盘方向）：
- * - 品牌 + 五项目的地导航（总览/库存/清单/统计/设置）
+ * - 品牌 + 四项目的地导航（总览/库存/清单/统计）——2026-11-13 设置移出一级导航（低频配置项不占导航位）
  * - 通知入口收敛为右上角铃铛（IA 调整：通知是覆盖层不是目的地，方案「轻量下拉」）
+ * - 设置入口收敛为右上角齿轮（Gmail/Drive 全局工具区惯例，与铃铛并排）
  * - 清单待购数徽章；右侧「记一笔」
  */
 import { ref } from 'vue';
@@ -21,7 +22,6 @@ const nav = [
   { to: '/inventory', label: '库存' },
   { to: '/list', label: '清单', badge: 'pending' as const },
   { to: '/stats', label: '统计' },
-  { to: '/settings', label: '设置' },
 ] as const;
 </script>
 
@@ -55,6 +55,17 @@ const nav = [
           </button>
           <NotificationPopover v-if="notifOpen" @close="notifOpen = false" />
         </div>
+        <!-- 设置齿轮（2026-11-13：低频配置项移出一级导航，Gmail/Drive 全局工具区惯例） -->
+        <RouterLink
+          class="gear-btn"
+          to="/settings"
+          aria-label="设置"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        </RouterLink>
         <button class="topnav-add" type="button" @click="router.push('/items/new')">＋ 记一笔</button>
       </div>
     </div>
@@ -172,6 +183,36 @@ const nav = [
   font-weight: var(--fw-semibold);
   line-height: 16px;
   text-align: center;
+}
+/* 设置齿轮（与铃铛同款 ghost 图标按钮；当前页高亮同 topnav-item 语言） */
+.gear-btn {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-m);
+  color: var(--color-muted);
+  text-decoration: none;
+  transition: background 150ms ease-out, color 150ms ease-out;
+}
+.gear-btn:hover {
+  background: var(--color-field);
+  color: var(--color-ink);
+}
+.gear-btn.router-link-active {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+.gear-btn:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 1.2px var(--color-ink),
+    0 0 0 4.5px var(--ring-outer);
+}
+.gear-btn svg {
+  width: 19px;
+  height: 19px;
 }
 .topnav-add {
   background: var(--color-ink);
