@@ -12,8 +12,10 @@ import { formatDateCN, todayISO } from '../lib/dates';
 import { api } from '../api';
 import { overdueDays as sharedOverdueDays } from '@home-stock/shared';
 import RestoreChoicePanel from './RestoreChoicePanel.vue';
+import ItemAvatar from './ItemAvatar.vue';
 import { useItemRestore } from '../composables/useItemRestore';
 import { useItemDetail } from '../composables/useItemDetail';
+import { imageUrl } from '../lib/images';
 
 const props = defineProps<{ itemId: number }>();
 const emit = defineEmits<{ deleted: []; changed: [] }>();
@@ -202,9 +204,22 @@ async function doDelete(): Promise<void> {
   <template v-else-if="item">
     <div class="detail-card">
       <div class="card-head">
-        <span class="avatar" :class="`tone-${statusBadge?.tone}`" aria-hidden="true">{{
-          item.name.slice(0, 1)
-        }}</span>
+        <!-- 图片（0006）：有图时头像位显示图片（点击新窗口看原图），无图保持首字母占位 -->
+        <a
+          v-if="item.imagePath"
+          class="avatar avatar-photo"
+          :href="imageUrl(item.imagePath)"
+          target="_blank"
+          rel="noopener"
+          :aria-label="`查看 ${item.name} 的图片`"
+        >
+          <ItemAvatar :name="item.name" :image-path="item.imagePath" />
+        </a>
+        <ItemAvatar
+          v-else
+          :name="item.name"
+          :tone="statusBadge?.tone"
+        />
         <div class="head-info">
           <h2 class="item-name">{{ item.name }}</h2>
           <span v-if="item.status === 'active'" class="badge" :class="`tone-${statusBadge?.tone}`">
@@ -344,6 +359,16 @@ async function doDelete(): Promise<void> {
 .avatar.tone-yellow { background: var(--tone-yellow-bg); color: var(--tone-yellow-fg); }
 .avatar.tone-green { background: var(--tone-green-bg); color: var(--tone-green-fg); }
 .avatar.tone-blue { background: var(--tone-blue-bg); color: var(--tone-blue-fg); }
+/* 图片头像（0006）：同尺寸圆形裁剪；点击进原图（新窗口）；图片填充由 ItemAvatar 自带 */
+.avatar-photo {
+  padding: 0;
+  overflow: hidden;
+  flex: none;
+}
+.avatar-photo .avatar-img {
+  width: 100%;
+  height: 100%;
+}
 .head-info {
   display: flex;
   align-items: center;

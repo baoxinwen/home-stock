@@ -8,6 +8,7 @@ import { categories, items } from '../db/schema';
 import { ApiException } from '../common/api.exception';
 import { SettingsService } from '../settings/settings.service';
 import { localTimestamp } from '../reminders/clock';
+import { IMAGE_PATH_PATTERN, UploadsService } from '../uploads/uploads.service';
 
 type ItemRow = typeof items.$inferSelect;
 
@@ -24,11 +25,21 @@ function normalizeItemName(raw: unknown): string {
   return name;
 }
 
+/** 图片路径归一（0006）：null=无图；字符串须为服务端随机名形态（防路径注入），否则 400 */
+function normalizeImagePath(raw: unknown): string | null {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== 'string' || !IMAGE_PATH_PATTERN.test(raw)) {
+    throw new ApiException(400, API_ERROR_CODES.VALIDATION_ERROR, 'image_path 非法');
+  }
+  return raw;
+}
+
 @Injectable()
 export class ItemsService {
   constructor(
     @Inject(DB_TOKEN) private readonly db: Db,
     @Inject(SettingsService) private readonly settingsService: SettingsService,
+    @Inject(UploadsService) private readonly uploads: UploadsService,
   ) {}
 
   // ---------- 查询 ----------
@@ -69,6 +80,7 @@ export class ItemsService {
     const name = normalizeItemName(fields.name); // M1：create 必填；非字符串/空白 → 400
     this.assertCommon(fields);
     if (fields.categoryId != null) await this.assertCategoryExists(fields.categoryId);
+    const imagePath = normalizeImagePath(fields.imagePath);
     const now = localTimestamp(new Date());
     const row = this.db
       .insert(items)
@@ -83,6 +95,7 @@ export class ItemsService {
         openShelfDays: fields.openShelfDays ?? null,
         remindDays: fields.remindDays ?? null,
         minQuantity: fields.minQuantity ?? null,
+        imagePath,
         opened: 0,
         status: 'active',
         source: 'manual',
@@ -115,6 +128,14 @@ export class ItemsService {
       }
     }
 
+    // 图片（0006）：提供时校验形态；换图/删图同步清理旧文件（新图已由上传接口落盘，不动新文件）
+    if (fields.imagePath !== undefined) {
+      patch.imagePath = normalizeImagePath(fields.imagePath);
+      if (existing.imagePath != null && existing.imagePath !== patch.imagePath) {
+        this.uploads.remove(existing.imagePath);
+      }
+    }
+
     // 开封状态：置 1 → server 写 opened_at=当日（幂等：已开封时不覆盖首次日期）；置 0 → 清空 opened_at
     if (fields.opened !== undefined) {
       if (fields.opened === 1) {
@@ -135,8 +156,10 @@ export class ItemsService {
   }
 
   async remove(id: number): Promise<{ id: number }> {
-    this.findOrFail(id);
+    const existing = this.findOrFail(id);
     this.db.delete(items).where(eq(items.id, id)).run();
+    // 物品删除 → 图片文件同步清理（附属资源，失败不回滚删除）
+    if (existing.imagePath != null) this.uploads.remove(existing.imagePath);
     return { id };
   }
 
@@ -280,6 +303,7 @@ export class ItemsService {
       createdAt: r.createdAt ?? null,
       updatedAt: r.updatedAt ?? null,
       source: (r.source as ItemSource | null) ?? 'manual',
+      imagePath: r.imagePath ?? null,
       effectiveExpiryDate: effective,
       expiryStatus: expiryStatus(effective, threshold),
     };

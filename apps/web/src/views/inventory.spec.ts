@@ -40,6 +40,7 @@ function makeItem(patch: Partial<ItemDto>): ItemDto {
     createdAt: null,
     updatedAt: null,
     source: 'manual',
+    imagePath: null,
     effectiveExpiryDate: null,
     expiryStatus: 'none',
     ...patch,
@@ -286,5 +287,24 @@ describe('I-7 移动端同名聚合', () => {
     // 点批次行 → 开物品详情（桌面语义为抽屉，移动为跳页——此分支 matchMedia=false → 跳页）
     await batches[0].find('.item-card-btn').trigger('click');
     await flushPromises();
+  });
+});
+
+describe('InventoryView 物品图片缩略图（0006）', () => {
+  it('有图物品 avatar 显示图片（lazy img），无图回落首字母色块', async () => {
+    // 默认 matchMedia 不匹配 → 移动卡片视图（两视图共用 ItemAvatar，断言一处）
+    vi.mocked(api.listItems).mockReset().mockResolvedValue([
+      makeItem({ id: 90, name: '带图牛奶', imagePath: `${'a'.repeat(32)}.jpg`, expiryStatus: 'ok', effectiveExpiryDate: '2026-12-01' }),
+      makeItem({ id: 91, name: '无图面包', expiryStatus: 'ok', effectiveExpiryDate: '2026-12-01' }),
+    ]);
+    const wrapper = await mountAt();
+
+    const imgs = wrapper.findAll('img.avatar-img');
+    expect(imgs).toHaveLength(1);
+    expect(imgs[0].attributes('src')).toBe(`/api/uploads/${'a'.repeat(32)}.jpg?token=`);
+    expect(imgs[0].attributes('loading')).toBe('lazy');
+    // 无图物品仍是首字母色块
+    const letters = wrapper.findAll('span.avatar').map((s) => s.text());
+    expect(letters.some((t) => t.includes('无'))).toBe(true);
   });
 });

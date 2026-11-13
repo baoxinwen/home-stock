@@ -5,10 +5,17 @@ import { api } from '../api';
 import { findItem } from '../api/queries';
 import BackButton from '../components/BackButton.vue';
 import { useItemForm, emptyForm, formFromItem } from '../composables/useItemForm';
+import { imageUrl } from '../lib/images';
+
+/** 图片上传约束（与 server UPLOAD_MAX_BYTES 对齐，前端预检省一次网络往返） */
+const IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 
 const route = useRoute();
 const router = useRouter();
 const editId = route.params.id ? Number(route.params.id) : null;
+/** 清单转库存（M5.2 表单确认范式）：?convert=<清单项id>，预填后保存即入库+标 converted */
+const convertIdRaw = typeof route.query.convert === 'string' ? Number(route.query.convert) : NaN;
+const convertId = ref<number | null>(Number.isInteger(convertIdRaw) && convertIdRaw > 0 ? convertIdRaw : null);
 
 const {
   form,
@@ -48,8 +55,67 @@ onMounted(() => {
       .catch((e: unknown) => {
         error.value = e instanceof Error ? e.message : '物品加载失败，请返回重试';
       });
+    return;
+  }
+  // 转库存模式：拉清单项预填（名称/数量/单位/单价/类别），购买日期默认今天（D-5 同义）
+  if (convertId.value !== null) {
+    const targetId = convertId.value;
+    void api
+      .listShoppingItems()
+      .then((list) => {
+        const shopping = list.find((s) => s.id === targetId);
+        if (!shopping || shopping.status === 'converted') {
+          // 静默降级为普通新建会让用户在不知情下重复入库——显式提示并退出转换模式
+          convertId.value = null;
+          error.value = '该清单项不存在或已转入库存';
+          return;
+        }
+        form.value = {
+          ...emptyForm(),
+          name: shopping.name,
+          quantity: shopping.quantity,
+          unit: shopping.unit ?? '',
+          price: shopping.price === null ? '' : String(shopping.price),
+          categoryId: shopping.categoryId,
+        };
+      })
+      .catch((e: unknown) => {
+        convertId.value = null;
+        error.value = e instanceof Error ? e.message : '清单项加载失败，请返回重试';
+      });
   }
 });
+
+/** 图片上传（0006，选填单图）：选文件即传 → 写入 form.imagePath；移除仅清字段，文件由 server 保存时清理/孤儿兜底 */
+const fileInput = ref<HTMLInputElement | null>(null);
+const uploading = ref(false);
+const uploadError = ref('');
+
+async function onFileChange(e: Event): Promise<void> {
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = ''; // 允许重复选择同一文件再次触发 change
+  if (!file) return;
+  if (file.size > IMAGE_MAX_BYTES) {
+    uploadError.value = '图片不能超过 2MB';
+    return;
+  }
+  uploadError.value = '';
+  uploading.value = true;
+  try {
+    const { path } = await api.uploadImage(file);
+    form.value.imagePath = path;
+  } catch (err) {
+    uploadError.value = err instanceof Error ? err.message : '上传失败，请重试';
+  } finally {
+    uploading.value = false;
+  }
+}
+
+function removeImage(): void {
+  form.value.imagePath = '';
+  uploadError.value = '';
+}
 
 async function submit(): Promise<void> {
   const built = toPayload();
@@ -60,8 +126,14 @@ async function submit(): Promise<void> {
   saving.value = true;
   error.value = '';
   try {
-    const saved = editId === null ? await api.createItem(built.payload) : await api.updateItem(editId, built.payload);
-    await router.replace(`/items/${saved.id}`);
+    if (convertId.value !== null) {
+      // 表单确认转换：按表单内容入库 + 清单项 converted（server 同一事务原子完成）
+      const result = await api.convertShoppingItem(convertId.value, built.payload);
+      await router.replace(`/items/${result.item.id}`);
+    } else {
+      const saved = editId === null ? await api.createItem(built.payload) : await api.updateItem(editId, built.payload);
+      await router.replace(`/items/${saved.id}`);
+    }
   } catch (e) {
     error.value = e instanceof Error ? e.message : '保存失败，请重试';
   } finally {
@@ -101,8 +173,8 @@ async function submitAndAgain(): Promise<void> {
   <div class="form-view">
     <header class="page-head">
       <BackButton />
-      <h1 class="page-title">{{ editId === null ? '记一笔' : '编辑物品' }}</h1>
-      <button v-if="editId === null" class="link-btn head-action" type="button" @click="openHistory">从历史复制</button>
+      <h1 class="page-title">{{ convertId !== null ? '转入库存' : editId === null ? '记一笔' : '编辑物品' }}</h1>
+      <button v-if="editId === null && convertId === null" class="link-btn head-action" type="button" @click="openHistory">从历史复制</button>
     </header>
 
     <form class="form" @submit.prevent="submit">
@@ -193,6 +265,29 @@ async function submitAndAgain(): Promise<void> {
         </p>
       </fieldset>
 
+      <!-- 图片（0006，选填单图）：选文件/拍照即传，预览可移除；未保存移除的文件由孤儿清理兜底 -->
+      <fieldset class="field image-group">
+        <legend class="label">图片（选填）</legend>
+        <div v-if="form.imagePath" class="image-preview">
+          <img :src="imageUrl(form.imagePath)" alt="物品图片" class="preview-img" />
+          <button class="image-remove" type="button" :disabled="uploading" @click="removeImage">移除图片</button>
+        </div>
+        <div v-else class="image-upload">
+          <button class="image-btn" type="button" :disabled="uploading" @click="fileInput?.click()">
+            {{ uploading ? '上传中…' : '添加图片' }}
+          </button>
+          <span class="image-hint">jpg / png / webp，不超过 2MB；移动端可直接拍照</span>
+        </div>
+        <input
+          ref="fileInput"
+          class="image-input"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          @change="onFileChange"
+        />
+        <p v-if="uploadError" class="image-error" role="alert">{{ uploadError }}</p>
+      </fieldset>
+
       <!-- 审查 F-2：三字段横跨双列内部三等分（原挤左列右侧空白失衡） -->
       <div class="field-row row-3">
         <label class="field">
@@ -224,8 +319,8 @@ async function submitAndAgain(): Promise<void> {
         <button class="btn-primary" type="submit" :disabled="saving">
           {{ saving ? '保存中…' : '保存' }}
         </button>
-        <!-- D-12：新建态连续录入（规格 §2.2 逐件录入场景），编辑态不出现 -->
-        <button v-if="editId === null" class="btn-secondary again-btn" type="button" :disabled="saving" @click="submitAndAgain">
+        <!-- D-12：新建态连续录入（规格 §2.2 逐件录入场景），编辑/转库存态不出现（一次转换语义） -->
+        <button v-if="editId === null && convertId === null" class="btn-secondary again-btn" type="button" :disabled="saving" @click="submitAndAgain">
           保存并再记一笔
         </button>
       </div>
@@ -381,6 +476,63 @@ select:focus {
   font-size: 13px;
   color: var(--tone-green-fg);
   margin: 0;
+}
+/* 图片（0006，选填单图）：预览分层（铁律 1 去边框），失败文案就地显示 */
+.image-group .image-input {
+  display: none;
+}
+.image-upload {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.image-btn {
+  padding: 8px 16px;
+  border-radius: var(--radius-m);
+  border: none;
+  background: var(--color-field);
+  color: var(--color-text);
+  font-size: 14px;
+  cursor: pointer;
+}
+.image-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.image-hint {
+  font-size: 12px;
+  color: var(--color-text-secondary, var(--color-text));
+  opacity: 0.72;
+}
+.image-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.preview-img {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+}
+.image-remove {
+  border: none;
+  background: none;
+  color: var(--tone-red-fg, var(--color-text));
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+}
+.image-remove:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.image-error {
+  color: var(--tone-red-fg, var(--color-text));
+  font-size: 13px;
+  margin: 8px 0 0;
 }
 .opened-field {
   display: flex;

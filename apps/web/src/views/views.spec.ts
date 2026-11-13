@@ -22,6 +22,34 @@ vi.mock('../api', () => ({
     restoreItem: vi.fn(),
     listHistory: vi.fn(async () => []),
     listNotifications: vi.fn(async () => []),
+    listShoppingItems: vi.fn(async () => []),
+    uploadImage: vi.fn(async () => ({ path: `${'e'.repeat(32)}.png` })),
+    convertShoppingItem: vi.fn(async () => ({
+      item: {
+        id: 77,
+        name: 'converted',
+        categoryId: null,
+        purchaseDate: null,
+        quantity: 1,
+        unit: null,
+        price: null,
+        expiryDate: null,
+        opened: 0,
+        openedAt: null,
+        openShelfDays: null,
+        remindDays: null,
+        minQuantity: null,
+        status: 'active',
+        archivedReason: null,
+        archivedAt: null,
+        createdAt: null,
+        updatedAt: null,
+        source: 'shopping',
+        effectiveExpiryDate: null,
+        expiryStatus: 'none',
+      },
+      shoppingItem: { id: 5, name: 'converted', quantity: 1, unit: null, price: null, categoryId: null, status: 'converted' },
+    })),
     getSettings: vi.fn(async () => ({
       default_remind_days: 3,
       reminder_hour: 8,
@@ -60,6 +88,7 @@ function makeItem(patch: Partial<ItemDto>): ItemDto {
     createdAt: null,
     updatedAt: null,
     source: 'manual',
+    imagePath: null,
     effectiveExpiryDate: '2026-01-10',
     expiryStatus: 'ok',
     ...patch,
@@ -205,6 +234,126 @@ describe('ItemFormView', () => {
 
     expect(api.createItem).not.toHaveBeenCalled();
     expect(wrapper.find('.error-text').text()).toContain('请填写过期日期，或改选长期存储');
+  });
+});
+
+describe('ItemFormView 清单转库存（M5.2 表单确认范式）', () => {
+  it('?convert=id：预填清单项字段（名称/数量/单价），标题「转入库存」，隐藏再记一笔', async () => {
+    vi.mocked(api.listShoppingItems).mockResolvedValue([
+      {
+        id: 5,
+        name: '清单牛奶',
+        quantity: 3,
+        unit: '盒',
+        price: 12.5,
+        categoryId: null,
+        status: 'done',
+      },
+    ]);
+    const router = await makeRouter('/items/new?convert=5');
+    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    await flushPromises();
+
+    expect(wrapper.find('.page-title').text()).toBe('转入库存');
+    const nameInput = wrapper.find('input[type="text"]');
+    expect((nameInput.element as HTMLInputElement).value).toBe('清单牛奶');
+    const qty = wrapper.find('input[type="number"]');
+    expect((qty.element as HTMLInputElement).value).toBe('3');
+    expect(wrapper.text()).not.toContain('保存并再记一笔');
+    expect(wrapper.text()).not.toContain('从历史复制');
+  });
+
+  it('保存 → convertShoppingItem(id, payload)（含选定的过期方式），跳新物品详情', async () => {
+    vi.mocked(api.listShoppingItems).mockResolvedValue([
+      { id: 5, name: '清单牛奶', quantity: 3, unit: '盒', price: 12.5, categoryId: null, status: 'done' },
+    ]);
+    const router = await makeRouter('/items/new?convert=5');
+    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    await flushPromises();
+
+    // 过期方式选「长期存储」→ payload.expiryDate 为 null
+    await wrapper.findAll('button.chip').filter((b) => b.text().includes('长期存储'))[0].trigger('click');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+
+    expect(api.convertShoppingItem).toHaveBeenCalledTimes(1);
+    const [calledId, payload] = vi.mocked(api.convertShoppingItem).mock.calls[0];
+    expect(calledId).toBe(5);
+    expect(payload).toMatchObject({ name: '清单牛奶', quantity: 3, unit: '盒', price: 12.5, expiryDate: null });
+    expect(api.createItem).not.toHaveBeenCalled();
+    expect(router.currentRoute.value.path).toBe('/items/77');
+  });
+
+  it('清单项不存在或已转换 → 显式报错并降级为普通新建', async () => {
+    vi.mocked(api.listShoppingItems).mockResolvedValue([
+      { id: 5, name: '已转项', quantity: 1, unit: null, price: null, categoryId: null, status: 'converted' },
+    ]);
+    const router = await makeRouter('/items/new?convert=5');
+    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    await flushPromises();
+
+    expect(wrapper.find('.error-text').text()).toContain('该清单项不存在或已转入库存');
+    expect(wrapper.find('.page-title').text()).toBe('记一笔');
+  });
+});
+
+describe('ItemFormView 图片（0006，选填单图）', () => {
+  async function pickFile(wrapper: ReturnType<typeof mount>): Promise<void> {
+    // happy-dom 不解码图片内容：直接对 input 触发带 File 的 change
+    const input = wrapper.find('input.image-input').element as HTMLInputElement;
+    Object.defineProperty(input, 'files', {
+      value: [new File([new Uint8Array(8)], 'a.png', { type: 'image/png' })],
+      configurable: true,
+    });
+    await wrapper.find('input.image-input').trigger('change');
+    await flushPromises();
+  }
+
+  it('选文件即传：uploadImage 后预览出现，payload 带上传返回的文件名', async () => {
+    vi.mocked(api.createItem).mockResolvedValue(makeItem({}));
+    const router = await makeRouter('/items/new');
+    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    await flushPromises();
+
+    await wrapper.find('input[type="text"]').setValue('带图物品');
+    await wrapper.findAll('button.chip').filter((b) => b.text().includes('长期存储'))[0].trigger('click');
+    await pickFile(wrapper);
+
+    expect(api.uploadImage).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('.image-preview .preview-img').exists()).toBe(true);
+    await wrapper.find('form').trigger('submit');
+    expect(vi.mocked(api.createItem).mock.calls[0][0].imagePath).toBe(`${'e'.repeat(32)}.png`);
+  });
+
+  it('移除图片：预览消失，提交 imagePath=null', async () => {
+    vi.mocked(api.createItem).mockResolvedValue(makeItem({}));
+    const router = await makeRouter('/items/new');
+    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    await flushPromises();
+
+    await pickFile(wrapper);
+    await wrapper.find('.image-remove').trigger('click');
+    expect(wrapper.find('.image-preview').exists()).toBe(false);
+
+    await wrapper.find('input[type="text"]').setValue('删图物品');
+    await wrapper.findAll('button.chip').filter((b) => b.text().includes('长期存储'))[0].trigger('click');
+    await wrapper.find('form').trigger('submit');
+    expect(vi.mocked(api.createItem).mock.calls[0][0].imagePath).toBeNull();
+  });
+
+  it('超大文件前端预检拦截，不发上传请求', async () => {
+    const router = await makeRouter('/items/new');
+    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    await flushPromises();
+
+    const input = wrapper.find('input.image-input').element as HTMLInputElement;
+    const bigFile = new File([new Uint8Array(2 * 1024 * 1024 + 1)], 'big.png', { type: 'image/png' });
+    Object.defineProperty(input, 'files', { value: [bigFile], configurable: true });
+    await wrapper.find('input.image-input').trigger('change');
+    await flushPromises();
+
+    expect(api.uploadImage).not.toHaveBeenCalled();
+    expect(wrapper.find('.image-error').text()).toContain('图片不能超过 2MB');
   });
 });
 

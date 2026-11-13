@@ -48,7 +48,11 @@ docker compose up -d --build
 
 ### 备份数据目录
 
-`./data` 同时包含 `stock.db` 与 `backups/`。除应用内备份外，也可定期用 NAS 快照/rsync 备份整个 `data/` 目录。
+`./data` 同时包含 `stock.db`、`uploads/`（物品图片）与 `backups/`。除应用内备份外，也可定期用 NAS 快照/rsync 备份整个 `data/` 目录。
+
+> 物品图片（可选上传，单图 ≤2MB）保存在 `data/uploads/`，**不包含在应用内备份文件里**——
+> 应用内备份只含数据库数据（物品记录中保存图片文件名）。换机恢复备份后如需保留图片，
+> 请连同 `data/uploads/` 目录一起迁移。未被物品引用且超过 24 小时的图片会在启动时自动清理。
 
 ---
 
@@ -70,7 +74,7 @@ docker compose up -d --build
 
 `ACCESS_TOKEN` 的行为（fail-closed）：
 
-- 设置了：请求需带 `X-Access-Token: <口令>`；`?token=<口令>` **仅备份下载类 GET 端点**（`/api/backup`、`/api/backup/list`）可用，供手动下载链接场景——应用内下载已走 Header 鉴权，其余接口（含写接口）一律不接受 query 口令，避免口令进访问日志/浏览器历史。
+- 设置了：请求需带 `X-Access-Token: <口令>`；`?token=<口令>` **仅手动链接下载类 GET 端点**（`/api/backup`、`/api/backup/list`、`/api/uploads/:file` 图片下发）可用，供手动链接/`<img>` 场景——应用内 API 已走 Header 鉴权，其余接口（含写接口）一律不接受 query 口令，避免口令进访问日志/浏览器历史。
 - **只有 `NODE_ENV` 显式为 `development` / `test` 时才允许留空**；`production` 或未设置 `NODE_ENV` 时启动会直接失败退出（不会带着裸奔的 API 跑起来）。
 - 口令启动时 `trim()` 去掉首尾空白，空白视为未配置；长度不足 8 位会拒绝启动。
 - 口令比较使用常量时间比较（SHA-256 归一化 + `timingSafeEqual`）。

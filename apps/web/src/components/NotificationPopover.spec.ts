@@ -59,6 +59,7 @@ function makeItem(patch: Partial<ItemDto>): ItemDto {
     createdAt: null,
     updatedAt: null,
     source: 'manual',
+    imagePath: null,
     effectiveExpiryDate: null,
     expiryStatus: 'none',
     ...patch,

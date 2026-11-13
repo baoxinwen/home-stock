@@ -30,15 +30,18 @@ function isHealthPath(req: Request): boolean {
 }
 
 function isBackupDownloadPath(req: Request): boolean {
-  // I-7：query 口令仅备份下载类 GET 端点保留（手动链接场景；应用内下载已走 Header 鉴权）。
+  // I-7：query 口令仅「手动链接下载类」GET 端点保留（应用内 API 已走 Header 鉴权）。
   // 挂在 /api 上时 path='/backup'、'/backup/list'；全局挂载则带 /api 前缀。
   // restore 是 POST 本就不接受 query，不在白名单。
+  // 物品图片下发（0006）：<img> 无法带 header，GET /api/uploads/:file 同属此类。
   const path = (req.path || '').toLowerCase().replace(/\/+$/, '');
   return (
     path === '/backup' ||
     path === '/backup/list' ||
     path === '/api/backup' ||
-    path === '/api/backup/list'
+    path === '/api/backup/list' ||
+    path.startsWith('/uploads/') ||
+    path.startsWith('/api/uploads/')
   );
 }
 

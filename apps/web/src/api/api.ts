@@ -13,6 +13,7 @@ import type {
   CategoryCreateDto,
   CategoryDto,
   CategoryUpdateDto,
+  ConvertItemPayloadDto,
   ConvertResult,
   ItemCreateDto,
   ItemDto,
@@ -190,10 +191,10 @@ export class ApiClient {
     return this.request<{ id: number }>(`/shopping-items/${id}`, { method: 'DELETE' });
   }
 
-  convertShoppingItem(id: number): Promise<ConvertResult> {
+  convertShoppingItem(id: number, payload?: ConvertItemPayloadDto): Promise<ConvertResult> {
     return this.request<ConvertResult>(`/shopping-items/${id}/convert`, {
       method: 'POST',
-      body: JSON.stringify({}),
+      body: JSON.stringify(payload ?? {}),
     });
   }
 
@@ -260,6 +261,15 @@ export class ApiClient {
 
   runReminders(): Promise<ReminderRunResult> {
     return this.request<ReminderRunResult>('/reminders/run', { method: 'POST', body: JSON.stringify({}) });
+  }
+
+  // ---------- uploads（0006 物品图片） ----------
+
+  /** 上传物品图片（multipart）：成功返回服务端随机文件名，写入物品 imagePath */
+  uploadImage(file: File): Promise<{ path: string }> {
+    const form = new FormData();
+    form.append('file', file);
+    return this.request<{ path: string }>('/uploads', { method: 'POST', body: form });
   }
 
   // ---------- backup（M8 / I-7） ----------

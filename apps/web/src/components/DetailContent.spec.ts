@@ -48,6 +48,7 @@ function makeItem(patch: Partial<ItemDto>): ItemDto {
     createdAt: null,
     updatedAt: null,
     source: 'manual',
+    imagePath: null,
     effectiveExpiryDate: null,
     expiryStatus: 'none',
     ...patch,
@@ -187,5 +188,28 @@ describe('DetailContent I-2 数量步进连点不丢更新', () => {
     await flushPromises();
     expect(calls).toHaveLength(1); // 第二次点击未产生请求
     expect(wrapper.find('.qty-value').text()).toContain('6'); // 最终值正确
+  });
+});
+
+describe('DetailContent 物品图片（0006）', () => {
+  it('有图 → 头像位显示图片链接（?token= URL）；无图 → 首字母占位', async () => {
+    const active = makeItem({ status: 'active', imagePath: `${'f'.repeat(32)}.png` });
+    vi.mocked(api.listItems).mockReset().mockResolvedValue([active]);
+    const router = await makeRouter();
+    const wrapper = mount(DetailContent, { global: { plugins: [router] }, props: { itemId: active.id } });
+    await flushPromises();
+
+    const link = wrapper.find('.avatar-photo');
+    expect(link.exists()).toBe(true);
+    expect(link.attributes('href')).toBe(`/api/uploads/${'f'.repeat(32)}.png?token=`);
+    expect(wrapper.find('.avatar-img').exists()).toBe(true);
+    await wrapper.unmount();
+
+    const plain = makeItem({ status: 'active', imagePath: null });
+    vi.mocked(api.listItems).mockReset().mockResolvedValue([plain]);
+    const w2 = mount(DetailContent, { global: { plugins: [router] }, props: { itemId: plain.id } });
+    await flushPromises();
+    expect(w2.find('.avatar-photo').exists()).toBe(false);
+    expect(w2.find('span.avatar').exists()).toBe(true);
   });
 });

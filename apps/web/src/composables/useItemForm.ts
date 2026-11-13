@@ -26,6 +26,8 @@ export interface ItemFormModel {
   remindDays: string;
   /** 最少库存（选填，D-1）：低于此值时库存页/清单页给低库存提示 */
   minQuantity: string;
+  /** 物品图片（0006，可选）：服务端随机文件名；空串 = 无图 */
+  imagePath: string;
   /** 编辑态：是否已开封（保存时 opened=1，server 记录开封日为当日） */
   opened: boolean;
 }
@@ -45,6 +47,7 @@ export function emptyForm(): ItemFormModel {
     openShelfDays: '',
     remindDays: '',
     minQuantity: '',
+    imagePath: '',
     opened: false,
   };
 }
@@ -66,6 +69,7 @@ export function formFromItem(item: ItemDto): ItemFormModel {
     openShelfDays: item.openShelfDays === null ? '' : String(item.openShelfDays),
     remindDays: item.remindDays === null ? '' : String(item.remindDays),
     minQuantity: item.minQuantity === null ? '' : String(item.minQuantity),
+    imagePath: item.imagePath ?? '',
     opened: Boolean(item.opened),
   };
 }
@@ -177,6 +181,8 @@ export function useItemForm(existing: ItemDto | null = null) {
       openShelfDays: numOrNull(f.openShelfDays),
       remindDays: numOrNull(f.remindDays),
       minQuantity: numOrNull(f.minQuantity),
+      // 图片（0006）：空串 = 无图（null）；值 = 上传接口返回的文件名
+      imagePath: f.imagePath === '' ? null : f.imagePath,
     };
     // 开封开关仅编辑态出现：勾选 → opened:1（server 记当日开封日），取消 → opened:0（server 清空开封日）
     if (f.opened) payload.opened = 1;

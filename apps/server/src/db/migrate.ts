@@ -141,6 +141,18 @@ UPDATE notifications
     upSql: `ALTER TABLE notifications ADD COLUMN done INTEGER DEFAULT 0;`,
     downSql: `ALTER TABLE notifications DROP COLUMN done;`,
   },
+  {
+    /**
+     * 0006：物品图片（P1 单图，参照 Grocy/HomeBox：文件系统存图、DB 只存相对路径）。
+     * - 路径为 uploads/ 下的文件名（服务端随机化命名），图片实体在 DATA_DIR/uploads/
+     * - 可选字段：NULL = 无图，任何流程不受影响
+     * - 生命周期：替换/删除物品时同步清理旧文件（uploads.service）
+     * - down 通过 DROP COLUMN 回滚（SQLite 3.35+，better-sqlite3 13 已满足）
+     */
+    name: '0006_items_image_path',
+    upSql: `ALTER TABLE items ADD COLUMN image_path TEXT;`,
+    downSql: `ALTER TABLE items DROP COLUMN image_path;`,
+  },
 ];
 
 const BOOKKEEPING_TABLE = `

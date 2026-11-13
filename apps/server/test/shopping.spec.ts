@@ -340,6 +340,69 @@ describe('POST /api/shopping-items/:id/convert（M5.2/M5.3）', () => {
     const forItem = (notifs.body.data as { itemId: number }[]).filter((n) => n.itemId === itemId);
     expect(forItem).toEqual([]);
   });
+
+  it('convert 带 payload（表单确认）：物品完全按 payload 生成（含过期日/阈值字段），清单项 converted', async () => {
+    const categoryId = await createCategory(uid('表单确认类别'));
+    const shopping = await createShopping({ name: uid('表单确认前名'), quantity: 2, price: 12 });
+    await markDone(shopping.id);
+
+    const res = await request(server())
+      .post(`/api/shopping-items/${shopping.id}/convert`)
+      .send({
+        name: '表单确认牛奶',
+        categoryId,
+        purchaseDate: '2026-11-13',
+        quantity: 3,
+        unit: '盒',
+        price: 13.5,
+        expiryDate: '2026-11-20',
+        openShelfDays: 2,
+        remindDays: 5,
+        minQuantity: 1,
+      });
+    expect(res.status).toBe(200);
+    const result = res.body.data as { item: ItemDto; shoppingItem: ShoppingItemDto };
+    expect(result.shoppingItem).toMatchObject({ id: shopping.id, status: 'converted' });
+    expect(result.item).toMatchObject({
+      name: '表单确认牛奶',
+      categoryId,
+      purchaseDate: '2026-11-13',
+      quantity: 3,
+      unit: '盒',
+      price: 13.5,
+      expiryDate: '2026-11-20',
+      openShelfDays: 2,
+      remindDays: 5,
+      minQuantity: 1,
+      status: 'active',
+      source: 'shopping',
+    });
+    expect(await itemsNamed('表单确认牛奶')).toHaveLength(1);
+  });
+
+  it('convert 带 payload 校验：name 空/quantity 非法 → 400，清单项保持 done 不生成库存', async () => {
+    const shopping = await createShopping({ name: uid('payload校验'), quantity: 1 });
+    await markDone(shopping.id);
+
+    const badName = await request(server())
+      .post(`/api/shopping-items/${shopping.id}/convert`)
+      .send({ name: '   ', quantity: 1 });
+    expect(badName.status).toBe(400);
+    expect(badName.body.code).toBe('VALIDATION_ERROR');
+
+    const badQty = await request(server())
+      .post(`/api/shopping-items/${shopping.id}/convert`)
+      .send({ name: uid('数量非法'), quantity: 0 });
+    expect(badQty.status).toBe(400);
+    expect(badQty.body.code).toBe('VALIDATION_ERROR');
+
+    // name 提供时 trim 生效：空白两侧去掉
+    const trimmed = await request(server())
+      .post(`/api/shopping-items/${shopping.id}/convert`)
+      .send({ name: `  ${uid('trim名单')}  `, quantity: 1 });
+    expect(trimmed.status).toBe(200);
+    expect(trimmed.body.data.item.name).not.toMatch(/^\s|\s$/);
+  });
 });
 
 describe('DELETE /api/shopping-items/converted（M5.2 手动清空）', () => {

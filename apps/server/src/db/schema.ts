@@ -32,6 +32,8 @@ export const items = sqliteTable('items', {
   createdAt: text('created_at'),
   updatedAt: text('updated_at'),
   source: text('source').default('manual'),
+  /** 物品图片（0006，P1 单图）：uploads/ 下文件名，NULL=无图；文件实体在 DATA_DIR/uploads/ */
+  imagePath: text('image_path'),
 });
 
 export const shoppingListItems = sqliteTable('shopping_list_items', {

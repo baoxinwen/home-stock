@@ -5,19 +5,19 @@
  * converted 项不在主视图展示，仅用于「清空已完成」。
  */
 import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import type { CategoryDto, ItemDto, ShoppingItemDto } from '@home-stock/shared';
 import { api } from '../api';
 import ChevronIcon from '../components/ChevronIcon.vue';
 import { formatAmount } from '../lib/stats';
 
+const router = useRouter();
 const items = ref<ShoppingItemDto[]>([]);
 const categories = ref<CategoryDto[]>([]);
 const stockItems = ref<ItemDto[]>([]);
 const loading = ref(true);
 const error = ref('');
 const notice = ref('');
-/** D-3：转库存成功后可操作提示的目标（物品 id）→ 渲染「去补填过期日」链接 */
-const noticeLinkItemId = ref<number | null>(null);
 const confirmingClear = ref(false);
 // 审查 L-2：已完成区默认折叠——待购 0 时页面重心全是历史记录（点开展开）
 const doneCollapsed = ref(true);
@@ -140,7 +140,6 @@ async function add(): Promise<void> {
 async function run(action: () => Promise<unknown>, success = ''): Promise<boolean> {
   error.value = '';
   notice.value = '';
-  noticeLinkItemId.value = null;
   confirmingClear.value = false;
   try {
     await action();
@@ -169,17 +168,16 @@ function updateQuantity(item: ShoppingItemDto, event: Event): void {
   });
 }
 
-/** 转库存（D-3）：成功提示带「去补填过期日」直达链接（转换响应含新物品 id） */
-function convert(item: ShoppingItemDto): void {
-  void run(async () => {
-    const result = await api.convertShoppingItem(item.id);
-    noticeLinkItemId.value = result.item.id;
-  }, '已转入库存');
-}
-
-/** 待购行直达（体检表追加）：服务端 D-7 后 pending 可直接转换 */
-function convertDirect(item: ShoppingItemDto): void {
-  convert(item);
+/**
+ * 单件转库存（表单确认范式）：跳录入页预填清单项字段，用户选过期方式后保存，
+ * 保存即按表单内容入库 + 清单项 converted（convert 接口带 payload，原子完成）。
+ * 返回/取消不动清单项，可重试。批量「全部转为库存」仍走一键（convertAllDone）。
+ */
+function convertToStock(item: ShoppingItemDto): void {
+  notice.value = '';
+  error.value = '';
+  confirmingClear.value = false;
+  void router.push({ path: '/items/new', query: { convert: String(item.id) } });
 }
 
 /** D-4：已完成区批量转入库存，逐件调用后汇总提示（部分失败如实报数） */
@@ -190,7 +188,6 @@ async function convertAllDone(): Promise<void> {
   batchConverting.value = true;
   error.value = '';
   notice.value = '';
-  noticeLinkItemId.value = null;
   confirmingClear.value = false;
   let ok = 0;
   let failed = 0;
@@ -282,15 +279,8 @@ onMounted(async () => {
     </form>
 
     <p v-if="error" class="error-text" role="alert">{{ error }}</p>
-    <p v-if="notice" class="notice-text">
-      {{ notice }}
-      <!-- D-3：可操作提示——直达新物品的编辑页补填过期日 -->
-      <RouterLink
-        v-if="noticeLinkItemId !== null"
-        :to="`/items/${noticeLinkItemId}/edit`"
-        class="notice-link"
-      >去补填过期日 →</RouterLink>
-    </p>
+    <!-- 单件转库存已改为跳转表单确认（按表单内容入库），批量一键完成后仅文字提示 -->
+    <p v-if="notice" class="notice-text">{{ notice }}</p>
 
     <p v-if="loading && items.length === 0" class="muted-text">加载中…</p>
     <p v-else-if="pendingItems.length === 0 && doneItems.length === 0" class="empty-state">
@@ -317,8 +307,8 @@ onMounted(async () => {
             />
             <template v-if="item.unit">{{ item.unit }}</template>
           </span>
-          <!-- 体检表追加（可发现性）：待购行内直达转库存（自动完成+转换组合，符合服务端契约） -->
-          <button class="convert" type="button" @click="convertDirect(item)">转为库存</button>
+          <!-- 体检表追加（可发现性）：待购行内直达转库存（跳表单确认，服务端 D-7 后 pending 可直接转换） -->
+          <button class="convert" type="button" @click="convertToStock(item)">转为库存</button>
           <button class="delete" type="button" :aria-label="`删除 ${item.name}`" @click="remove(item)">
             删除
           </button>
@@ -380,7 +370,7 @@ onMounted(async () => {
             />
             <template v-if="item.unit">{{ item.unit }}</template>
           </span>
-          <button class="convert" type="button" @click="convert(item)">转为库存</button>
+          <button class="convert" type="button" @click="convertToStock(item)">转为库存</button>
           <button class="delete" type="button" :aria-label="`删除 ${item.name}`" @click="remove(item)">
             删除
           </button>
@@ -712,16 +702,12 @@ onMounted(async () => {
 }
 </style>
 <style scoped>
-/* D-3 可操作提示 + D-4 批量转库存 */
+/* 批量转库存完成提示 */
 .notice-text {
   display: flex;
   align-items: baseline;
   gap: 10px;
   flex-wrap: wrap;
-}
-.notice-link {
-  color: var(--tone-blue-fg);
-  font-weight: var(--fw-semibold);
 }
 .done-head {
   display: flex;

@@ -41,6 +41,7 @@ function makeArchived(patch: Partial<ItemDto>): ItemDto {
     createdAt: null,
     updatedAt: null,
     source: 'manual',
+    imagePath: null,
     effectiveExpiryDate: null,
     expiryStatus: 'expired',
     ...patch,

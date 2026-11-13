@@ -22,6 +22,8 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { RemindersModule } from './reminders/reminders.module';
 import { StatsModule } from './stats/stats.module';
 import { BackupModule } from './backup/backup.module';
+import { UploadsModule } from './uploads/uploads.module';
+import { sweepOrphanUploads } from './uploads/uploads.service';
 
 export interface BootstrapOptions {
   /** SQLite 主库路径；默认走 DATA_DIR/stock.db */
@@ -30,6 +32,8 @@ export interface BootstrapOptions {
   accessToken?: string | null;
   /** 备份目录；默认 BACKUP_DIR 或库文件同级的 backups/ */
   backupDir?: string;
+  /** 物品图片目录（0006）；默认库文件同级的 uploads/ */
+  uploadsDir?: string;
   /** 是否注册定时任务（提醒/备份）；默认 true */
   scheduler?: boolean;
   /** 前端静态目录；undefined = env PUBLIC_DIR 或 ./public，null = 不托管 */
@@ -38,6 +42,7 @@ export interface BootstrapOptions {
 
 interface AppModuleOptions {
   backupDir: string;
+  uploadsDir: string;
   scheduler: boolean;
 }
 
@@ -52,7 +57,7 @@ function makeAppModule(handle: DbHandle, options: AppModuleOptions) {
         controllers: [HealthController],
         imports: [
           CategoriesModule.forRoot(db),
-          ItemsModule.forRoot(db),
+          ItemsModule.forRoot(db, { uploadsDir: options.uploadsDir }),
           ShoppingModule.forRoot(db),
           SettingsModule.forRoot(db),
           NotificationsModule.forRoot(db),
@@ -62,6 +67,7 @@ function makeAppModule(handle: DbHandle, options: AppModuleOptions) {
             backupDir: options.backupDir,
             scheduler: options.scheduler,
           }),
+          UploadsModule.forRoot(db, { uploadsDir: options.uploadsDir }),
         ],
       };
     }
@@ -143,11 +149,12 @@ export async function createApplication(
     }
   }
   const backupDir = options.backupDir ?? process.env.BACKUP_DIR ?? join(dirname(dbPath), 'backups');
+  const uploadsDir = options.uploadsDir ?? join(dirname(dbPath), 'uploads');
   const publicDir =
     options.publicDir === undefined ? (process.env.PUBLIC_DIR ?? resolve('public')) : options.publicDir;
 
   const app = await NestFactory.create<NestExpressApplication>(
-    makeAppModule(handle, { backupDir, scheduler: options.scheduler !== false }).forRoot(),
+    makeAppModule(handle, { backupDir, uploadsDir, scheduler: options.scheduler !== false }).forRoot(),
     {
       logger: process.env.NODE_ENV === 'test' ? false : ['error', 'warn', 'log'],
       abortOnError: false,
@@ -165,5 +172,10 @@ export async function createApplication(
   }
 
   await app.init();
+
+  // 启动孤儿图片清理（上传后未保存的残留；只在表可读时生效）
+  const swept = sweepOrphanUploads(handle.db, uploadsDir);
+  if (swept > 0) console.log(`[startup] 已清理孤儿图片 ${swept} 个`);
+
   return { app, handle };
 }

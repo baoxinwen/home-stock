@@ -92,6 +92,7 @@ function makeItem(patch: Partial<ItemDto>): ItemDto {
     createdAt: null,
     updatedAt: null,
     source: 'manual',
+    imagePath: null,
     effectiveExpiryDate: null,
     expiryStatus: 'none',
     ...patch,
@@ -109,6 +110,7 @@ async function makeRouter(path: string) {
     routes: [
       { path: '/', component: InventoryView },
       { path: '/list', component: ShoppingView },
+      { path: '/items/new', component: { template: '<div/>' } },
       { path: '/items/:id', component: { template: '<div/>' } },
       { path: '/items/:id/edit', component: { template: '<div/>' } },
       { path: '/archive', component: { template: '<div/>' } },
@@ -350,7 +352,7 @@ describe('ShoppingView 增删改与转库存', () => {
     expect(api.updateShoppingItem).toHaveBeenCalledWith(6, { status: 'pending' });
   });
 
-  it('转为库存：done 项按钮 → convertShoppingItem 后重拉', async () => {
+  it('转为库存：单件按钮 → 跳录入表单预填（?convert=id），不直接调转换接口', async () => {
     vi.mocked(api.listShoppingItems).mockResolvedValueOnce([
       makeShopping({ id: 9, name: '待转牛奶', status: 'done', quantity: 2, unit: '盒' }),
     ]);
@@ -360,8 +362,10 @@ describe('ShoppingView 增删改与转库存', () => {
 
     await wrapper.find('.shopping-item.done .convert').trigger('click');
     await flushPromises();
-    expect(api.convertShoppingItem).toHaveBeenCalledWith(9);
-    expect(api.listShoppingItems).toHaveBeenCalledTimes(2);
+    // M5.2 表单确认范式：跳录入页带清单项 id，保存动作在表单页完成
+    expect(router.currentRoute.value.path).toBe('/items/new');
+    expect(router.currentRoute.value.query.convert).toBe('9');
+    expect(api.convertShoppingItem).not.toHaveBeenCalled();
   });
 
   it('清空已转换需二次确认 → clearConvertedShoppingItems 后重拉', async () => {
@@ -445,6 +449,7 @@ describe('InventoryView 待补过期日（M5.3，仅转库存来源）', () => {
         id: 8,
         name: '长期盐',
         source: 'manual',
+        imagePath: null,
         createdAt: localDateTimeISO(new Date(Date.now() - 86400000)),
       }),
     ]);
@@ -476,38 +481,21 @@ describe('InventoryView 待补过期日（M5.3，仅转库存来源）', () => {
   });
 });
 
-describe('ShoppingView 待购直达转库存（D-7 后 pending 直接转换）', () => {
-  it('待购行点「转为库存」→ 直接调 convert 并提示', async () => {
+describe('ShoppingView 待购直达转库存（D-7 后 pending 可转，表单确认范式）', () => {
+  it('待购行点「转为库存」→ 跳表单预填（?convert=id），不直接调转换接口', async () => {
     vi.mocked(api.listShoppingItems).mockResolvedValue([
       makeShopping({ id: 5, name: '香蕉', status: 'pending', quantity: 2, unit: '把' }),
     ]);
-    vi.mocked(api.convertShoppingItem).mockResolvedValue({
-      item: makeItem({ id: 99, name: '香蕉', quantity: 2, unit: '把', source: 'shopping' }),
-      shoppingItem: makeShopping({ id: 5, status: 'converted' }),
-    });
     const router = await makeRouter('/list');
     const wrapper = mount(ShoppingView, { global: { plugins: [router] } });
     await flushPromises();
 
     await wrapper.find('.shopping-item.pending .convert').trigger('click');
     await flushPromises();
-    expect(api.convertShoppingItem).toHaveBeenCalledWith(5);
-    expect(wrapper.text()).toContain('已转入库存');
+    expect(router.currentRoute.value.path).toBe('/items/new');
+    expect(router.currentRoute.value.query.convert).toBe('5');
+    expect(api.convertShoppingItem).not.toHaveBeenCalled();
     expect(api.updateShoppingItem).not.toHaveBeenCalled();
-  });
-
-  it('转换失败 → 行内错误提示', async () => {
-    vi.mocked(api.listShoppingItems).mockResolvedValue([
-      makeShopping({ id: 5, name: '香蕉', status: 'pending' }),
-    ]);
-    vi.mocked(api.convertShoppingItem).mockRejectedValue(new Error('网络错误'));
-    const router = await makeRouter('/list');
-    const wrapper = mount(ShoppingView, { global: { plugins: [router] } });
-    await flushPromises();
-
-    await wrapper.find('.shopping-item.pending .convert').trigger('click');
-    await flushPromises();
-    expect(wrapper.find('.error-text').text()).toContain('网络错误');
   });
 });
 

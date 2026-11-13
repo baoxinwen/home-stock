@@ -9,6 +9,7 @@ import { needsExpiryDate } from '../lib/needs-expiry';
 import { useInventory } from '../composables/useInventory';
 import { useMediaQuery } from '../composables/useMediaQuery';
 import ChevronIcon from '../components/ChevronIcon.vue';
+import ItemAvatar from '../components/ItemAvatar.vue';
 import ItemDrawer from '../components/ItemDrawer.vue';
 
 const router = useRouter();
@@ -462,13 +463,11 @@ onMounted(() => {
           role="listitem"
         >
           <button class="inv-name-btn" type="button" :aria-label="`查看 ${group.batches[0].name}`" @click="openDetail(group.batches[0])">
-            <span
-              class="avatar"
-              :class="`tone-${badgeFor(group.batches[0].expiryStatus, group.batches[0].opened).tone}`"
-              aria-hidden="true"
-            >
-              {{ group.batches[0].name.slice(0, 1) }}
-            </span>
+            <ItemAvatar
+              :name="group.batches[0].name"
+              :image-path="group.batches[0].imagePath"
+              :tone="badgeFor(group.batches[0].expiryStatus, group.batches[0].opened).tone"
+            />
             <span class="inv-name-wrap">
               <span class="item-name">{{ group.batches[0].name }}</span>
               <span class="inv-sub">
@@ -528,13 +527,11 @@ onMounted(() => {
             type="button"
             @click="openDetail(group.batches[0])"
           >
-            <span
-              class="avatar"
-              :class="`tone-${badgeFor(group.batches[0].expiryStatus, group.batches[0].opened).tone}`"
-              aria-hidden="true"
-            >
-              {{ group.batches[0].name.slice(0, 1) }}
-            </span>
+            <ItemAvatar
+              :name="group.batches[0].name"
+              :image-path="group.batches[0].imagePath"
+              :tone="badgeFor(group.batches[0].expiryStatus, group.batches[0].opened).tone"
+            />
             <span class="item-info">
               <span class="item-name">{{ group.batches[0].name }}</span>
               <span class="item-meta">
@@ -567,7 +564,10 @@ onMounted(() => {
             :aria-expanded="isExpanded(group.name)"
             @click="toggleGroup(group.name)"
           >
-            <span class="avatar avatar-group" aria-hidden="true">{{ group.name.slice(0, 1) }}</span>
+            <ItemAvatar
+              :name="group.name"
+              :image-path="group.batches.find((b) => b.imagePath)?.imagePath"
+            />
             <span class="item-info">
               <span class="item-name">
                 {{ group.name }}<em class="inv-batches">（{{ group.batches.length }} 批）</em>

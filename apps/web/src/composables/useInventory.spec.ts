@@ -39,6 +39,7 @@ function makeItem(id: number, name: string): ItemDto {
     createdAt: null,
     updatedAt: null,
     source: 'manual',
+    imagePath: null,
     effectiveExpiryDate: null,
     expiryStatus: 'none',
   };

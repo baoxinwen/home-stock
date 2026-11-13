@@ -92,6 +92,7 @@ describe('DTO 契约形状', () => {
       createdAt: null,
       updatedAt: null,
       source: 'manual',
+      imagePath: null,
       effectiveExpiryDate: '2026-11-09',
       expiryStatus: 'ok',
     };
@@ -174,6 +175,7 @@ describe('DTO 契约形状', () => {
       createdAt: null,
       updatedAt: null,
       source: 'manual',
+      imagePath: null,
       effectiveExpiryDate: null,
       expiryStatus: 'none',
     };
@@ -233,6 +235,7 @@ describe('DTO 契约形状', () => {
         createdAt: null,
         updatedAt: null,
         source: 'manual',
+        imagePath: null,
         effectiveExpiryDate: null,
         expiryStatus: 'none',
       },

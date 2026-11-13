@@ -4,6 +4,7 @@ import {
   API_ERROR_CODES,
   SHOPPING_ITEM_STATUSES,
   type ApiResponse,
+  type ConvertItemPayloadDto,
   type ConvertResult,
   type ShoppingItemCreateDto,
   type ShoppingItemDto,
@@ -54,9 +55,14 @@ export class ShoppingController {
 
   @HttpCode(200)
   @Post(':id/convert')
-  async convert(@Req() req: Request, @Param('id') id: string): Promise<ApiResponse<ConvertResult>> {
+  async convert(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Body() payload?: ConvertItemPayloadDto,
+  ): Promise<ApiResponse<ConvertResult>> {
     assertNotForcedDbError(req);
-    return { data: await this.svc.convert(parseId(id)) };
+    // payload 有内容 = 表单确认转换（按 payload 生成物品）；缺省 = 快捷转换（批量一键，按清单项字段）
+    return { data: await this.svc.convert(parseId(id), payload ?? undefined) };
   }
 
   @Put(':id')

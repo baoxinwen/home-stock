@@ -87,6 +87,8 @@ export interface ItemDto {
   updatedAt: string | null;
   /** manual=手动录入 / shopping=购物清单转库存 */
   source: ItemSource;
+  /** 物品图片（0006，P1 单图）：uploads/ 下随机文件名，null=无图；URL 走 /api/uploads/:file?token= */
+  imagePath: string | null;
   /** server 计算的有效过期日（YYYY-MM-DD，可空=长期存储品） */
   effectiveExpiryDate: string | null;
   /** none=无过期概念 / ok=未到期 / expiring=≤阈值 / expired=已过期 */
@@ -105,6 +107,8 @@ export interface ItemCreateDto {
   openShelfDays?: number | null;
   remindDays?: number | null;
   minQuantity?: number | null;
+  /** 物品图片（可选）：先 POST /api/uploads 得到文件名再带入；格式由 server 校验 */
+  imagePath?: string | null;
 }
 
 /** 部分更新；opened 置 1 时 server 写 opened_at=当日，置 0 时清空 */
@@ -175,6 +179,24 @@ export type ShoppingItemUpdateDto = Partial<ShoppingItemCreateDto> & {
 export interface ConvertResult {
   item: ItemDto;
   shoppingItem: ShoppingItemDto;
+}
+
+/**
+ * 转库存表单确认 payload（可选字段）。
+ * 传入时物品完全按 payload 生成（表单预填清单项字段、用户确认/修改后提交）；
+ * 不传或空对象 = 快捷转换（批量一键，物品按清单项字段生成、过期日期为空走待补兜底）。
+ */
+export interface ConvertItemPayloadDto {
+  name?: string;
+  categoryId?: number | null;
+  purchaseDate?: string | null;
+  quantity?: number;
+  unit?: string | null;
+  price?: number | null;
+  expiryDate?: string | null;
+  openShelfDays?: number | null;
+  remindDays?: number | null;
+  minQuantity?: number | null;
 }
 
 // ---------- 浪费统计（M10） ----------
