@@ -177,154 +177,164 @@ async function submitAndAgain(): Promise<void> {
       <button v-if="editId === null && convertId === null" class="link-btn head-action" type="button" @click="openHistory">从历史复制</button>
     </header>
 
+    <!-- 2026-11-14 融合布局（分区卡片 × 主辅两栏）：左主栏必填动线，右辅栏「更多选项」
+         收纳选填项；920px 居中（分区卡片单列贴左撑不起宽屏，用户反馈融合） -->
     <form class="form" @submit.prevent="submit">
-      <label class="field">
-        <span class="label">名称 *</span>
-        <input v-model="form.name" type="text" required placeholder="如：鲜牛奶" />
-      </label>
-
-      <div class="field-row">
-        <label class="field">
-          <span class="label">类别</span>
-          <select v-model="form.categoryId">
-            <option :value="null">未分类</option>
-            <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
-          </select>
-        </label>
-        <label class="field">
-          <span class="label">数量</span>
-          <input v-model.number="form.quantity" type="number" min="0" step="any" />
-        </label>
-        <label class="field">
-          <span class="label">单位</span>
-          <input v-model="form.unit" type="text" placeholder="盒" list="unit-suggestions" />
-          <datalist id="unit-suggestions">
-            <option v-for="u in ['盒', '瓶', '袋', '包', '个', '杯', '罐', '把', '提', '卷']" :key="u" :value="u" />
-          </datalist>
-        </label>
-      </div>
-
-      <div class="field-row">
-        <label class="field">
-          <span class="label">购买日期</span>
-          <input v-model="form.purchaseDate" type="date" />
-        </label>
-        <label class="field">
-          <span class="label">单价（元）</span>
-          <input v-model="form.price" type="number" min="0" step="0.01" placeholder="选填" />
-        </label>
-      </div>
-
-      <fieldset class="field expiry-group">
-        <legend class="label">过期方式</legend>
-        <div class="mode-switch">
-          <button
-            type="button"
-            class="chip"
-            :class="{ active: form.expiryMode === 'direct' }"
-            @click="form.expiryMode = 'direct'"
-          >
-            直接填过期日期
-          </button>
-          <button
-            type="button"
-            class="chip"
-            :class="{ active: form.expiryMode === 'shelf' }"
-            @click="form.expiryMode = 'shelf'"
-          >
-            生产日期 + 保质期
-          </button>
-          <button
-            type="button"
-            class="chip"
-            :class="{ active: form.expiryMode === 'none' }"
-            @click="form.expiryMode = 'none'"
-          >
-            长期存储
-          </button>
-        </div>
-        <label v-if="form.expiryMode === 'direct'" class="field">
-          <span class="label">过期日期</span>
-          <input v-model="form.expiryDate" type="date" />
-        </label>
-        <p v-else-if="form.expiryMode === 'none'" class="computed-hint">
-          长期存储品（如酒、干货）不设保质期，不参与临期/过期提醒
-        </p>
-        <div v-else class="field-row">
+      <div class="form-main">
+        <section class="form-card">
+          <h3 class="card-title">基础信息</h3>
           <label class="field">
-            <span class="label">生产日期</span>
-            <input v-model="form.productionDate" type="date" />
+            <span class="label">名称 *</span>
+            <input v-model="form.name" type="text" required placeholder="如：鲜牛奶" />
           </label>
-          <label class="field">
-            <span class="label">保质期（天）</span>
-            <input v-model="form.shelfLifeDays" type="number" min="1" step="1" />
-          </label>
-        </div>
-        <p v-if="form.expiryMode === 'shelf' && computedExpiry" class="computed-hint">
-          换算结果：有效期至 {{ computedExpiry }}
-        </p>
-      </fieldset>
+          <div class="field-row row-basic">
+            <label class="field">
+              <span class="label">类别</span>
+              <select v-model="form.categoryId">
+                <option :value="null">未分类</option>
+                <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="label">数量</span>
+              <input v-model.number="form.quantity" type="number" min="0" step="any" />
+            </label>
+            <label class="field">
+              <span class="label">单位</span>
+              <input v-model="form.unit" class="input-unit" type="text" placeholder="盒" list="unit-suggestions" />
+              <datalist id="unit-suggestions">
+                <option v-for="u in ['盒', '瓶', '袋', '包', '个', '杯', '罐', '把', '提', '卷']" :key="u" :value="u" />
+              </datalist>
+            </label>
+          </div>
+          <div class="field-row">
+            <label class="field">
+              <span class="label">购买日期</span>
+              <input v-model="form.purchaseDate" type="date" />
+            </label>
+            <label class="field">
+              <span class="label">单价（元）</span>
+              <input v-model="form.price" type="number" min="0" step="0.01" placeholder="选填" />
+            </label>
+          </div>
+        </section>
 
-      <!-- 图片（0006，选填单图）：选文件/拍照即传，预览可移除；未保存移除的文件由孤儿清理兜底 -->
-      <fieldset class="field image-group">
-        <legend class="label">图片（选填）</legend>
-        <div v-if="form.imagePath" class="image-preview">
-          <img :src="imageUrl(form.imagePath)" alt="物品图片" class="preview-img" />
-          <button class="image-remove" type="button" :disabled="uploading" @click="removeImage">移除图片</button>
-        </div>
-        <div v-else class="image-upload">
-          <button class="image-btn" type="button" :disabled="uploading" @click="fileInput?.click()">
-            {{ uploading ? '上传中…' : '添加图片' }}
+        <section class="form-card">
+          <h3 class="card-title">保质期</h3>
+          <fieldset class="field expiry-group">
+            <legend class="label">过期方式</legend>
+            <div class="mode-switch">
+              <button
+                type="button"
+                class="chip"
+                :class="{ active: form.expiryMode === 'direct' }"
+                @click="form.expiryMode = 'direct'"
+              >
+                直接填过期日期
+              </button>
+              <button
+                type="button"
+                class="chip"
+                :class="{ active: form.expiryMode === 'shelf' }"
+                @click="form.expiryMode = 'shelf'"
+              >
+                生产日期 + 保质期
+              </button>
+              <button
+                type="button"
+                class="chip"
+                :class="{ active: form.expiryMode === 'none' }"
+                @click="form.expiryMode = 'none'"
+              >
+                长期存储
+              </button>
+            </div>
+            <label v-if="form.expiryMode === 'direct'" class="field">
+              <span class="label">过期日期</span>
+              <input v-model="form.expiryDate" type="date" />
+            </label>
+            <p v-else-if="form.expiryMode === 'none'" class="computed-hint">
+              长期存储品（如酒、干货）不设保质期，不参与临期/过期提醒
+            </p>
+            <div v-else class="field-row">
+              <label class="field">
+                <span class="label">生产日期</span>
+                <input v-model="form.productionDate" type="date" />
+              </label>
+              <label class="field">
+                <span class="label">保质期（天）</span>
+                <input v-model="form.shelfLifeDays" type="number" min="1" step="1" />
+              </label>
+            </div>
+            <p v-if="form.expiryMode === 'shelf' && computedExpiry" class="computed-hint">
+              换算结果：有效期至 {{ computedExpiry }}
+            </p>
+          </fieldset>
+        </section>
+
+        <p v-if="error" class="error-text" role="alert">{{ error }}</p>
+
+        <!-- 审查 F-1：主/次保存按钮并排（原全宽黑条 + 半宽灰条主次失衡） -->
+        <div class="form-actions">
+          <button class="btn-primary" type="submit" :disabled="saving">
+            {{ saving ? '保存中…' : '保存' }}
           </button>
-          <span class="image-hint">jpg / png / webp，不超过 2MB；移动端可直接拍照</span>
+          <!-- D-12：新建态连续录入（规格 §2.2 逐件录入场景），编辑/转库存态不出现（一次转换语义） -->
+          <button v-if="editId === null && convertId === null" class="btn-secondary again-btn" type="button" :disabled="saving" @click="submitAndAgain">
+            保存并再记一笔
+          </button>
         </div>
-        <input
-          ref="fileInput"
-          class="image-input"
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          @change="onFileChange"
-        />
-        <p v-if="uploadError" class="image-error" role="alert">{{ uploadError }}</p>
-      </fieldset>
-
-      <!-- 审查 F-2：三字段横跨双列内部三等分（原挤左列右侧空白失衡） -->
-      <div class="field-row row-3">
-        <label class="field">
-          <span class="label">开封后保质（天）</span>
-          <input v-model="form.openShelfDays" type="number" min="1" step="1" placeholder="选填" />
-        </label>
-        <label class="field">
-          <span class="label">提醒阈值（天）</span>
-          <input v-model="form.remindDays" type="number" min="1" step="1" :placeholder="`默认 ${defaultRemindDays}`" />
-        </label>
-        <label class="field">
-          <span class="label">最少库存（选填）</span>
-          <input v-model="form.minQuantity" type="number" min="0" step="1" placeholder="低于此值提醒补货" />
-        </label>
+        <p v-if="againNotice" class="again-notice" role="status">{{ againNotice }}</p>
       </div>
 
-      <p v-if="error" class="error-text" role="alert">{{ error }}</p>
-
-      <label v-if="editId !== null" class="opened-field">
-        <input v-model="form.opened" type="checkbox" />
-        <span class="opened-text">
-          <span class="opened-title">已开封</span>
-          <span class="opened-hint">开启后将记录今天的开封日期，并按「开封后保质天数」重算有效期</span>
-        </span>
-      </label>
-
-      <!-- 审查 F-1：主/次保存按钮并排等宽（原全宽黑条 + 半宽灰条主次失衡） -->
-      <div class="form-actions">
-        <button class="btn-primary" type="submit" :disabled="saving">
-          {{ saving ? '保存中…' : '保存' }}
-        </button>
-        <!-- D-12：新建态连续录入（规格 §2.2 逐件录入场景），编辑/转库存态不出现（一次转换语义） -->
-        <button v-if="editId === null && convertId === null" class="btn-secondary again-btn" type="button" :disabled="saving" @click="submitAndAgain">
-          保存并再记一笔
-        </button>
-      </div>
-      <p v-if="againNotice" class="again-notice" role="status">{{ againNotice }}</p>
+      <aside class="form-side">
+        <section class="form-card">
+          <h3 class="card-title">更多选项</h3>
+          <!-- 图片（0006，选填单图）：选文件/拍照即传，预览可移除；未保存移除的文件由孤儿清理兜底 -->
+          <fieldset class="field image-group">
+            <legend class="label">图片（选填）</legend>
+            <div v-if="form.imagePath" class="image-preview">
+              <img :src="imageUrl(form.imagePath)" alt="物品图片" class="preview-img" />
+              <button class="image-remove" type="button" :disabled="uploading" @click="removeImage">移除图片</button>
+            </div>
+            <div v-else class="image-upload">
+              <button class="image-btn" type="button" :disabled="uploading" @click="fileInput?.click()">
+                {{ uploading ? '上传中…' : '添加图片' }}
+              </button>
+              <span class="image-hint">jpg / png / webp，不超过 2MB；移动端可直接拍照</span>
+            </div>
+            <input
+              ref="fileInput"
+              class="image-input"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              @change="onFileChange"
+            />
+            <p v-if="uploadError" class="image-error" role="alert">{{ uploadError }}</p>
+          </fieldset>
+          <div class="side-fields">
+            <label class="field">
+              <span class="label">开封后保质（天）</span>
+              <input v-model="form.openShelfDays" type="number" min="1" step="1" placeholder="选填" />
+            </label>
+            <label class="field">
+              <span class="label">提醒阈值（天）</span>
+              <input v-model="form.remindDays" type="number" min="1" step="1" :placeholder="`默认 ${defaultRemindDays}`" />
+            </label>
+            <label class="field">
+              <span class="label">最少库存（选填）</span>
+              <input v-model="form.minQuantity" type="number" min="0" step="1" placeholder="低于此值提醒补货" />
+            </label>
+          </div>
+          <label v-if="editId !== null" class="opened-field">
+            <input v-model="form.opened" type="checkbox" />
+            <span class="opened-text">
+              <span class="opened-title">已开封</span>
+              <span class="opened-hint">开启后将记录今天的开封日期，并按「开封后保质天数」重算有效期</span>
+            </span>
+          </label>
+        </section>
+      </aside>
     </form>
 
     <!-- 从历史复制 -->
@@ -356,6 +366,11 @@ async function submitAndAgain(): Promise<void> {
 </template>
 
 <style scoped>
+/* 融合布局：页头与 920 表单容器同宽居中（页头孤悬在 1200 容器上会与表单错位） */
+.form-view {
+  max-width: 920px;
+  margin: 0 auto;
+}
 .page-head {
   display: flex;
   align-items: baseline;
@@ -366,42 +381,58 @@ async function submitAndAgain(): Promise<void> {
 .page-head .head-action {
   margin-left: auto;
 }
+/* 2026-11-14 融合布局（分区卡片 × 主辅两栏）：左主栏必填动线（基础信息/保质期/保存）
+   + 右辅栏「更多选项」收纳选填项（图片/三项策略/已开封）；920px 居中——
+   分区卡片单列贴左撑不起宽屏（用户反馈融合） */
 .form {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
   gap: 14px;
+  max-width: 920px;
+  margin: 0 auto;
+  align-items: start;
 }
-/* 审查 F-1：移动纵向堆叠，桌面并排等宽（基础样式先于媒体查询，避免同特异性覆盖） */
-.form-actions {
+.form-main {
   display: flex;
   flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.form-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-l);
+  padding: 18px 20px;
+}
+.card-title {
+  font-family: 'SF Pro Display', -apple-system, 'PingFang SC', 'Segoe UI', sans-serif;
+  font-size: 13px;
+  color: var(--color-muted);
+  font-weight: var(--fw-semibold);
+  margin: 0 0 14px;
+}
+.form-main .form-card .field + .field-row,
+.form-main .form-card .field-row + .field-row,
+.form-main .form-card .field-row + .field {
+  margin-top: 14px;
+}
+/* 辅卡窄列：内容纵向流 */
+.form-side .form-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.side-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.form-actions {
+  display: flex;
+  flex-direction: row;
   gap: 10px;
 }
-/* 桌面双列栅格（task-11）：名称 | 类别/数量/单位，购买日期与过期方式并排；其余字段一行一组 */
-@media (min-width: 768px) {
-  .form {
-    gap: 14px 24px;
-    grid-template-columns: 1fr 1fr;
-    align-items: start;
-  }
-  .form > .error-text,
-  .form > .opened-field,
-  .form > .form-actions {
-    grid-column: 1 / -1;
-  }
-  /* 审查 F-2：三字段行跨双列，内部三等分 */
-  .form > .field-row.row-3 {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 14px 24px;
-  }
-  /* 审查 F-1：主/次保存并排等宽 */
-  .form-actions {
-    flex-direction: row;
-  }
-  .form-actions > button {
-    flex: 1;
-  }
+.form-actions > button {
+  flex: 0 1 320px;
 }
 .field {
   display: flex;
@@ -411,19 +442,45 @@ async function submitAndAgain(): Promise<void> {
   padding: 0;
   margin: 0;
   flex: 1;
+  min-width: 0;
 }
 .field-row {
   display: flex;
   gap: 12px;
 }
-/* 2026-11-12 移动端审查 M-6：三字段行窄屏换行（2+1），placeholder 不再溢出重叠 */
+/* 输入框长度匹配内容（转库存审查）：日期 180 / 数字 160 / 下拉 240 / 单位 110；
+   名称保持 560（基础信息主输入）。属性选择器特异性高于尾部 .field input 560 兜底 */
+.field input[type='date'] {
+  max-width: 180px;
+}
+.field input[type='number'] {
+  max-width: 160px;
+}
+.field select {
+  max-width: 240px;
+}
+.field .input-unit {
+  max-width: 110px;
+}
+/* 类别承载中文分类名可宽些，数量/单位窄（原型 1.4/0.8/0.8） */
+.row-basic .field:nth-child(1) {
+  flex: 1.4;
+}
+.row-basic .field:nth-child(2),
+.row-basic .field:nth-child(3) {
+  flex: 0.8;
+}
+/* 2026-11-14 融合布局：窄屏单列（主栏→辅栏顺序流），三窄字段在辅卡纵排，
+   M-6 的换行诉求由纵排天然满足 */
 @media (max-width: 767px) {
-  .field-row.row-3 {
-    flex-wrap: wrap;
+  .form {
+    grid-template-columns: minmax(0, 1fr);
   }
-  .field-row.row-3 .field {
-    flex: 1 1 42%;
-    min-width: 0;
+  .form-actions {
+    flex-direction: column;
+  }
+  .form-actions > button {
+    flex: 1;
   }
 }
 .label {
