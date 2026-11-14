@@ -240,30 +240,31 @@ async function doDelete(): Promise<void> {
           <dd>{{ formatDateCN(item.archivedAt.slice(0, 10)) }}</dd>
         </div>
       </dl>
-    </div>
 
-    <!-- 快捷操作（仅在库品）：审查 D-3 拆两组——开封状态与数量步进各自成卡，语义不再混排 -->
-    <section v-if="item.status === 'active'" class="quick-row" aria-label="快捷操作">
-      <div class="quick-card">
-        <h3 class="quick-label">开封状态</h3>
-        <button
-          class="open-toggle"
-          :class="{ opened: item.opened === 1 }"
-          type="button"
-          @click="toggleOpen"
-        >
-          {{ item.opened === 1 ? '取消开封' : '开封' }}
-        </button>
-      </div>
-      <div class="quick-card">
-        <h3 class="quick-label">数量</h3>
-        <div class="qty-stepper" aria-label="调整数量">
-          <button class="step-btn" type="button" aria-label="减少数量" :disabled="stepBusy" @click="stepQuantity(-1)">−</button>
-          <span class="qty-value num">{{ item.quantity }}{{ item.unit ? ` ${item.unit}` : '' }}</span>
-          <button class="step-btn" type="button" aria-label="增加数量" :disabled="stepBusy" @click="stepQuantity(1)">＋</button>
+      <!-- 2026-11-14 抽屉审查：快捷操作并入键值卡（同卡 hairline 分区），
+           消除「大卡+碎卡+按钮」在抽屉 canvas 上互相黏连的零碎感 -->
+      <section v-if="item.status === 'active'" class="quick-row" aria-label="快捷操作">
+        <div class="quick-card">
+          <h3 class="quick-label">开封状态</h3>
+          <button
+            class="open-toggle"
+            :class="{ opened: item.opened === 1 }"
+            type="button"
+            @click="toggleOpen"
+          >
+            {{ item.opened === 1 ? '取消开封' : '开封' }}
+          </button>
         </div>
-      </div>
-    </section>
+        <div class="quick-card">
+          <h3 class="quick-label">数量</h3>
+          <div class="qty-stepper" aria-label="调整数量">
+            <button class="step-btn" type="button" aria-label="减少数量" :disabled="stepBusy" @click="stepQuantity(-1)">−</button>
+            <span class="qty-value num">{{ item.quantity }}{{ item.unit ? ` ${item.unit}` : '' }}</span>
+            <button class="step-btn" type="button" aria-label="增加数量" :disabled="stepBusy" @click="stepQuantity(1)">＋</button>
+          </div>
+        </div>
+      </section>
+    </div>
 
     <p v-if="actionError" class="error-text" role="alert">{{ actionError }}</p>
 
@@ -518,21 +519,23 @@ async function doDelete(): Promise<void> {
   font-size: 14px;
 }
 
-/* 快捷操作：两组并排卡（审查 D-3） */
+/* 快捷操作：并入键值卡（2026-11-14 抽屉审查），同卡 hairline 分区；
+   卡内不再叠 surface 小块（大卡+碎卡在抽屉 canvas 上互相黏连） */
+/* 快捷操作纵向两行（用户要求恢复标签）：每行「标签 + 控件」两端对齐，
+   与键值表行语言一致 */
 .quick-row {
   display: flex;
+  flex-direction: column;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-line);
 }
 .quick-card {
-  flex: 1;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  background: var(--color-surface);
-  border-radius: var(--radius-l);
-  padding: 12px 14px;
-  flex-wrap: wrap;
   min-width: 0;
 }
 .quick-label {
@@ -560,10 +563,6 @@ async function doDelete(): Promise<void> {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-left: auto;
-}
-.quick-card .qty-stepper {
-  margin-left: auto;
 }
 .step-btn {
   width: 32px;
