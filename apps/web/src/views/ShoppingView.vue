@@ -305,7 +305,7 @@ onMounted(async () => {
               :aria-label="`修改数量 ${item.name}`"
               @change="updateQuantity(item, $event)"
             />
-            <template v-if="item.unit">{{ item.unit }}</template>
+            <span v-if="item.unit" class="unit-text">{{ item.unit }}</span>
           </span>
           <!-- 体检表追加（可发现性）：待购行内直达转库存（跳表单确认，服务端 D-7 后 pending 可直接转换） -->
           <button class="convert" type="button" @click="convertToStock(item)">转为库存</button>
@@ -368,7 +368,7 @@ onMounted(async () => {
               :aria-label="`修改数量 ${item.name}`"
               @change="updateQuantity(item, $event)"
             />
-            <template v-if="item.unit">{{ item.unit }}</template>
+            <span v-if="item.unit" class="unit-text">{{ item.unit }}</span>
           </span>
           <button class="convert" type="button" @click="convertToStock(item)">转为库存</button>
           <button class="delete" type="button" :aria-label="`删除 ${item.name}`" @click="remove(item)">
@@ -534,6 +534,11 @@ onMounted(async () => {
   gap: 4px;
   font-size: 13px;
   color: var(--color-muted);
+}
+/* 单位列统一最小宽：全角「组」13px vs 半角「g」8px 的字宽差会让框起点错开 5px */
+.unit-text {
+  min-width: 1em;
+  text-align: center;
 }
 .qty-edit {
   width: 54px;
