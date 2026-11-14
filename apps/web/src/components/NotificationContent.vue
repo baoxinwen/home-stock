@@ -345,6 +345,21 @@ onMounted(() => {
   gap: 10px;
   margin-bottom: 16px;
 }
+/* 2026-11-12 移动端审查 M-4：工具行窄屏改两段纵向（chips 一段、按钮一段右对齐），
+   「全部完成/发送日志」不再折行截断 */
+@media (max-width: 767px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .toolbar-right {
+    justify-content: flex-end;
+  }
+  .toolbar-right .btn-ghost,
+  .toolbar-right .mark-all {
+    white-space: nowrap;
+  }
+}
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -399,6 +414,21 @@ onMounted(() => {
   padding: 10px 12px;
   font-size: 13px;
   color: var(--color-muted);
+}
+/* 2026-11-12 移动端审查 M-5：单行排布下名称 flex:1 被操作按钮压到 0 宽——
+   窄屏改两行式：第一行主体（头像+类型+名称+时间），第二行操作按钮右对齐 */
+@media (max-width: 767px) {
+  .notification-item {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .notification-item .notif-main {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .notification-item > .notif-action {
+    margin-left: auto;
+  }
 }
 .notification-item.unread {
   color: var(--color-text);

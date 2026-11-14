@@ -91,6 +91,22 @@ const ariaLabel = computed(
   align-items: center;
   gap: 24px;
 }
+/* 2026-11-12 移动端审查 M-1：窄屏改纵向（环居中 + 图例全宽），横排图例在 390 宽被裁 */
+@media (max-width: 767px) {
+  .cat-donut {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+  .donut-wrap {
+    margin: 0 auto;
+    width: 132px;
+    height: 132px;
+  }
+  .donut-hole {
+    inset: 19px;
+  }
+}
 .donut-wrap {
   position: relative;
   width: 148px;

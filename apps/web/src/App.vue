@@ -14,17 +14,17 @@ const showNav = computed(() => shouldShowNav(route.name));
 // D-10：移动端 tabbar 未读/待购徽章（铃铛与面板内未读变化经 useNavBadges 单例同步）
 const { unread, pendingCount } = useNavBadges();
 
+// 2026-11-12 移动端 IA（M-13 方案A，与 PC 对齐：通知是收件箱不是目的地）——
+// tabbar 收 5 项去通知，通知入口收口到移动全局顶栏铃铛（红点未读数）
 const tabs = [
   { to: '/', label: '总览' },
   { to: '/inventory', label: '库存' },
-  { to: '/notifications', label: '通知', badge: 'unread' as const },
   { to: '/list', label: '清单', badge: 'pending' as const },
   { to: '/stats', label: '统计' },
   { to: '/settings', label: '设置' },
 ];
 
 function badgeFor(tab: (typeof tabs)[number]): number | null {
-  if (tab.badge === 'unread') return unread.value;
   if (tab.badge === 'pending') return pendingCount.value;
   return null;
 }
@@ -40,6 +40,21 @@ function badgeFor(tab: (typeof tabs)[number]): number | null {
     </main>
   </div>
   <template v-else>
+    <!-- 移动全局顶栏：brand + 通知铃铛（红点未读，点击进通知全页） -->
+    <header v-if="showNav" class="mobile-topbar">
+      <span class="mobile-brand">家庭库存</span>
+      <RouterLink
+        class="mobile-bell"
+        to="/notifications"
+        :aria-label="`通知（${unread} 条未读）`"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+        </svg>
+        <span v-if="unread > 0" class="mobile-bell-count num">{{ unread }}</span>
+      </RouterLink>
+    </header>
     <div class="app-shell">
       <RouterView />
     </div>
@@ -49,8 +64,7 @@ function badgeFor(tab: (typeof tabs)[number]): number | null {
           {{ t.label }}
           <span
             v-if="badgeFor(t) !== null && badgeFor(t)! > 0"
-            class="tab-badge"
-            :class="t.badge === 'unread' ? 'tab-badge-red' : 'tab-badge-blue'"
+            class="tab-badge tab-badge-blue"
           >{{ badgeFor(t) }}</span>
         </RouterLink>
       </div>

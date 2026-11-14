@@ -397,6 +397,12 @@ onMounted(() => {
   gap: 10px;
   margin-bottom: 20px;
 }
+/* 2026-11-12 移动端审查 M-7：5 卡 2+2+1 布局下损耗率卡跨双列，不再独占半宽留空 */
+@media (max-width: 1023px) {
+  .kpi-card:last-child {
+    grid-column: 1 / -1;
+  }
+}
 .kpi-card {
   background: var(--color-surface);
   border-radius: var(--radius-l);

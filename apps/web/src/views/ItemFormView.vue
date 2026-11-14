@@ -338,6 +338,16 @@ async function submitAndAgain(): Promise<void> {
   display: flex;
   gap: 12px;
 }
+/* 2026-11-12 移动端审查 M-6：三字段行窄屏换行（2+1），placeholder 不再溢出重叠 */
+@media (max-width: 767px) {
+  .field-row.row-3 {
+    flex-wrap: wrap;
+  }
+  .field-row.row-3 .field {
+    flex: 1 1 42%;
+    min-width: 0;
+  }
+}
 .label {
   font-size: 13px;
   color: var(--color-muted);

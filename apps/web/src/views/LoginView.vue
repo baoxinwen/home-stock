@@ -84,6 +84,21 @@ async function submit(): Promise<void> {
   max-width: 360px;
   margin: 12vh auto 0;
 }
+/* 2026-11-12 移动端审查 M-8：窄屏垂直居中（app-shell 顶部 20px，登录页无 tabbar） */
+@media (max-width: 767px) {
+  .login {
+    min-height: calc(100vh - 84px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    margin: 0 auto;
+  }
+  @supports (height: 100svh) {
+    .login {
+      min-height: calc(100svh - 84px);
+    }
+  }
+}
 .page-head {
   margin-bottom: 20px;
 }

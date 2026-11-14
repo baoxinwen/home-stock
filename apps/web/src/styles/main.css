@@ -231,6 +231,55 @@ h3 {
   padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
   z-index: 20;
 }
+/* 移动全局顶栏（2026-11-12 M-13 方案A：brand+铃铛，与 PC「通知=收件箱入口」心智对齐） */
+.mobile-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 19;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--color-tabbar);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.mobile-brand {
+  font-family: Georgia, 'Songti SC', 'Noto Serif SC', serif;
+  font-size: 17px;
+  font-weight: var(--fw-semibold);
+  color: var(--color-ink);
+  letter-spacing: 0.01em;
+}
+.mobile-bell {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--color-text);
+  text-decoration: none;
+  transition: background 150ms ease-out;
+}
+.mobile-bell:active {
+  background: var(--color-hover);
+}
+.mobile-bell svg {
+  width: 20px;
+  height: 20px;
+}
+.mobile-bell-count {
+  position: absolute;
+  top: -2px;
+  right: -6px;
+  font-size: 10px;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: var(--radius-pill);
+  background: var(--tone-red-bg);
+  color: var(--tone-red-fg);
+}
 .tabbar-inner {
   display: flex;
   gap: 4px;
@@ -338,6 +387,26 @@ h3 {
   padding: 2px 5px;
   margin-left: 2px;
   vertical-align: 2px;
+}
+
+/* 2026-11-12 移动端审查 M-10/M-11：筛选 chips 与设置 tab 导航窄屏横向滑动，
+   不再折成两行（大厂惯例：chips 单行横滑）；各组件 scoped 的 .chips/.tab-nav 命中 */
+@media (max-width: 767px) {
+  .chips,
+  .tab-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .chips::-webkit-scrollbar,
+  .tab-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .chips > *,
+  .tab-nav > * {
+    flex: none;
+    white-space: nowrap;
+  }
 }
 .tab-badge-red {
   background: var(--tone-red-bg);

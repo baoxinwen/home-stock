@@ -104,6 +104,16 @@ function isNow(month: string): boolean {
   color: var(--color-text);
   white-space: nowrap;
 }
+/* 2026-11-12 移动端审查 M-2：390 宽 6 组双柱金额标签交错重叠——窄屏隐藏逐柱标签，
+   月份标签保留，数值语义由 role=img 的 aria-label 承载 */
+@media (max-width: 767px) {
+  .inout-val {
+    display: none;
+  }
+  .inout-slot {
+    max-width: 20px;
+  }
+}
 .inout-val-waste {
   color: var(--tone-red-fg);
 }

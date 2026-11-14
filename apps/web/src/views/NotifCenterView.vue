@@ -14,6 +14,14 @@ import { useMediaQuery } from '../composables/useMediaQuery';
 
 const router = useRouter();
 const isDesktop = useMediaQuery('(min-width: 1024px)');
+
+/** 返回：有历史可退则 back（移动顶栏铃铛进入），否则回总览（深链/新标签直开无历史） */
+function goBack(): void {
+  const state = router.options.history.state as { back?: string | null } | null;
+  if (state && state.back != null) router.back();
+  else void router.push('/');
+}
+
 // 未读数由内容组件上抛（首次加载与标记已读都会触发）
 const unread = ref(0);
 // 桌面行点击开的物品抽屉；物品被删后内容里 nameById 过期 → 换 key 重载
@@ -46,10 +54,14 @@ function onReadChanged(): void {
 <template>
   <div class="notif-center wb-page">
     <header class="page-head">
+      <!-- 2026-11-12 M-13 方案A：通知改由顶栏铃铛进入，补返回导航 -->
+      <button class="back-btn" type="button" @click="goBack">‹ 返回</button>
       <h1 class="page-title">通知</h1>
-      <!-- L2 未读二态：0 未读是好状态，不再红字 -->
-      <span v-if="unread > 0" class="unread-count">{{ unread }} 条未读</span>
-      <span v-else class="inbox-clear">收件箱已清空</span>
+      <span class="head-tail">
+        <!-- L2 未读二态：0 未读是好状态，不再红字 -->
+        <span v-if="unread > 0" class="unread-count">{{ unread }} 条未读</span>
+        <span v-else class="inbox-clear">收件箱已清空</span>
+      </span>
     </header>
 
     <NotificationContent
@@ -79,8 +91,21 @@ function onReadChanged(): void {
 .page-head {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 16px;
+}
+.back-btn {
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--color-muted);
+  cursor: pointer;
+  padding: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.head-tail {
+  margin-left: auto;
 }
 .unread-count {
   font-size: 13px;

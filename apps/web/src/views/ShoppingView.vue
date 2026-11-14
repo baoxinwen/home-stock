@@ -645,6 +645,34 @@ onMounted(async () => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* 2026-11-12 移动端审查 M-3：窄屏建议行改两行网格（名称+按钮 / 说明全宽），
+   原单行 flex 下名称与说明被按钮挤到截断 */
+@media (max-width: 767px) {
+  .shopping-item.suggestion {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'name convert'
+      'meta convert';
+    row-gap: 2px;
+    align-items: center;
+  }
+  .shopping-item.suggestion .item-name {
+    grid-area: name;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .shopping-item.suggestion .item-meta {
+    grid-area: meta;
+    white-space: normal;
+  }
+  .shopping-item.suggestion .convert {
+    grid-area: convert;
+    align-self: center;
+  }
+}
 </style>
 <style scoped>
 /* 铁律 7 丝滑折叠：Grid 0fr→1fr，免 JS 算高 */
