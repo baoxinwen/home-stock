@@ -1,6 +1,6 @@
 {
   "name": "home-stock",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "面向家庭、自托管的轻量库存助手：物品库存、购物清单、临期提醒与浪费统计",
   "license": "MIT",
