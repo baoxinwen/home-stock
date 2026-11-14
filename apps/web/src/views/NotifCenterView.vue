@@ -9,18 +9,12 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import ItemDrawer from '../components/ItemDrawer.vue';
 import NotificationContent from '../components/NotificationContent.vue';
+import BackButton from '../components/BackButton.vue';
 import { refreshNavBadges } from '../composables/useNavBadges';
 import { useMediaQuery } from '../composables/useMediaQuery';
 
 const router = useRouter();
 const isDesktop = useMediaQuery('(min-width: 1024px)');
-
-/** 返回：有历史可退则 back（移动顶栏铃铛进入），否则回总览（深链/新标签直开无历史） */
-function goBack(): void {
-  const state = router.options.history.state as { back?: string | null } | null;
-  if (state && state.back != null) router.back();
-  else void router.push('/');
-}
 
 // 未读数由内容组件上抛（首次加载与标记已读都会触发）
 const unread = ref(0);
@@ -55,7 +49,7 @@ function onReadChanged(): void {
   <div class="notif-center wb-page">
     <header class="page-head">
       <!-- 2026-11-12 M-13 方案A：通知改由顶栏铃铛进入，补返回导航 -->
-      <button class="back-btn" type="button" @click="goBack">‹ 返回</button>
+      <BackButton />
       <h1 class="page-title">通知</h1>
       <span class="head-tail">
         <!-- L2 未读二态：0 未读是好状态，不再红字 -->
@@ -93,16 +87,6 @@ function onReadChanged(): void {
   align-items: baseline;
   gap: 12px;
   margin-bottom: 16px;
-}
-.back-btn {
-  background: none;
-  border: none;
-  font: inherit;
-  font-size: 14px;
-  color: var(--color-muted);
-  cursor: pointer;
-  padding: 0;
-  border-bottom: 1px solid var(--color-border);
 }
 .head-tail {
   margin-left: auto;

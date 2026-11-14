@@ -28,6 +28,7 @@ import {
 import { todayISO } from '../lib/dates';
 import ExpiringList from '../components/ExpiringList.vue';
 import CategoryDonut from '../components/CategoryDonut.vue';
+import ChevronIcon from '../components/ChevronIcon.vue';
 import InOutTrendChart from '../components/InOutTrendChart.vue';
 import StockHealthPanel from '../components/StockHealthPanel.vue';
 import TopValueBars from '../components/TopValueBars.vue';
@@ -210,7 +211,9 @@ onMounted(() => {
     </header>
 
     <section class="period-switch" aria-label="选择月份">
-      <button class="month-btn month-prev" type="button" @click="go(-1)">‹ 上一月</button>
+      <button class="month-btn month-prev" type="button" @click="go(-1)">
+        <ChevronIcon :rotate="180" /> 上一月
+      </button>
       <span class="period-label">{{ periodLabel }}</span>
       <button
         class="month-btn month-next"
@@ -218,7 +221,7 @@ onMounted(() => {
         :disabled="isCurrentMonth"
         @click="go(1)"
       >
-        下一月 ›
+        下一月 <ChevronIcon />
       </button>
     </section>
 
@@ -619,5 +622,12 @@ onMounted(() => {
 .error-text {
   color: var(--tone-red-fg);
   font-size: 14px;
+}
+</style>
+<style>
+/* 细节轮 D-4：深色下浪费段满宽时 tone-red-fg（浅粉）偏荧光，改用更柔的 bar-red；
+   浅色不变；图例小点保持 tone-red-fg 高对比 */
+:root[data-theme='dark'] .usage-seg-waste {
+  background: var(--bar-red);
 }
 </style>

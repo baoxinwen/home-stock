@@ -17,11 +17,33 @@ const { unread, pendingCount } = useNavBadges();
 // 2026-11-12 移动端 IA（M-13 方案A，与 PC 对齐：通知是收件箱不是目的地）——
 // tabbar 收 5 项去通知，通知入口收口到移动全局顶栏铃铛（红点未读数）
 // 2026-11-13 设置同样移出一级导航（低频配置项）：tabbar 收 4 项，入口在顶栏齿轮
+// 2026-11-13 细节轮 E3（M-9）：tabbar 图标化——icon+label 双行，大厂标准形态
 const tabs = [
-  { to: '/', label: '总览' },
-  { to: '/inventory', label: '库存' },
-  { to: '/list', label: '清单', badge: 'pending' as const },
-  { to: '/stats', label: '统计' },
+  {
+    to: '/',
+    label: '总览',
+    paths: ['M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', 'M9 22V12h6v10'],
+  },
+  {
+    to: '/inventory',
+    label: '库存',
+    paths: ['M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8', 'M2 3h20v5H2z', 'M10 12h4'],
+  },
+  {
+    to: '/list',
+    label: '清单',
+    badge: 'pending' as const,
+    paths: [
+      'M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12',
+      'M8 21h.01',
+      'M19 21h.01',
+    ],
+  },
+  {
+    to: '/stats',
+    label: '统计',
+    paths: ['M12 20v-10', 'M18 20V4', 'M6 20v-4'],
+  },
 ];
 
 function badgeFor(tab: (typeof tabs)[number]): number | null {
@@ -70,11 +92,16 @@ function badgeFor(tab: (typeof tabs)[number]): number | null {
     <nav v-if="showNav" class="tabbar" aria-label="主导航">
       <div class="tabbar-inner">
         <RouterLink v-for="t in tabs" :key="t.to" class="tab-item" :to="t.to">
-          {{ t.label }}
-          <span
-            v-if="badgeFor(t) !== null && badgeFor(t)! > 0"
-            class="tab-badge tab-badge-blue"
-          >{{ badgeFor(t) }}</span>
+          <span class="tab-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path v-for="(d, i) in t.paths" :key="i" :d="d" />
+            </svg>
+            <span
+              v-if="badgeFor(t) !== null && badgeFor(t)! > 0"
+              class="tab-badge tab-badge-blue"
+            >{{ badgeFor(t) }}</span>
+          </span>
+          <span class="tab-label">{{ t.label }}</span>
         </RouterLink>
       </div>
     </nav>

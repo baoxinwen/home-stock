@@ -9,6 +9,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import type { NotificationDto } from '@home-stock/shared';
 import { api } from '../api';
+import ChevronIcon from './ChevronIcon.vue';
 import { relativeDate, todayISO } from '../lib/dates';
 
 type InboxFilter = 'inbox' | 'unread' | 'done';
@@ -243,7 +244,7 @@ onMounted(() => {
           全部完成
         </button>
         <button class="btn-ghost" type="button" :aria-expanded="logsOpen" @click="logsOpen = !logsOpen">
-          发送日志 {{ logsOpen ? '▾' : '▸' }}
+          发送日志 <ChevronIcon :rotate="logsOpen ? 90 : 0" />
         </button>
       </div>
     </div>
@@ -578,20 +579,7 @@ onMounted(() => {
   opacity: 0.6;
   cursor: default;
 }
-/* 空态卡片：surface 卡 + 图标 + 主副文案 */
-.empty-card {
-  background: var(--color-surface);
-  border-radius: var(--radius-l);
-  padding: 44px 24px;
-  display: grid;
-  place-items: center;
-  gap: 6px;
-  text-align: center;
-}
-.empty-icon {
-  font-size: 40px;
-  line-height: 1;
-}
+/* 空态卡片样式已全局化（2026-11-13 细节轮 D-5，main.css 接管） */
 .empty-title {
   font-size: 15px;
   font-weight: var(--fw-semibold);

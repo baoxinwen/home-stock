@@ -7,6 +7,7 @@
 import { computed, onMounted, ref } from 'vue';
 import type { CategoryDto, ItemDto, ShoppingItemDto } from '@home-stock/shared';
 import { api } from '../api';
+import ChevronIcon from '../components/ChevronIcon.vue';
 import { formatAmount } from '../lib/stats';
 
 const items = ref<ShoppingItemDto[]>([]);
@@ -352,7 +353,7 @@ onMounted(async () => {
           :aria-expanded="!doneCollapsed"
           @click="doneCollapsed = !doneCollapsed"
         >
-          已完成（{{ doneItems.length }}）{{ doneCollapsed ? '▸' : '▾' }}
+          已完成（{{ doneItems.length }}）<ChevronIcon :rotate="doneCollapsed ? 0 : 90" />
         </button>
         <!-- D-4：批量转入库存，免去逐件点击 -->
         <button class="convert convert-all" type="button" :disabled="batchConverting" @click="convertAllDone">

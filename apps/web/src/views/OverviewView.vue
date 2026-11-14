@@ -127,6 +127,22 @@ const detailGroups = computed(() => {
     .sort((a, b) => b.items.length - a.items.length);
 });
 
+/** O-1（2026-11-13 细节轮）：明细限前 8 条——总览是摘要层，全量在库存页；
+ *  跨组累计截断（组内不足时下一个组补足），剩余件数在尾部提示 */
+const DETAIL_LIMIT = 8;
+const visibleDetailGroups = computed(() => {
+  let quota = DETAIL_LIMIT;
+  const out: { key: string; name: string; items: ItemDto[] }[] = [];
+  for (const g of detailGroups.value) {
+    if (quota <= 0) break;
+    const items = g.items.slice(0, quota);
+    out.push({ ...g, items });
+    quota -= items.length;
+  }
+  return out;
+});
+const detailHidden = computed(() => Math.max(0, active.value.length - DETAIL_LIMIT));
+
 /** 最近动态：归档记录按时间倒序 */
 const feed = computed(() =>
   [...archived.value]
@@ -243,7 +259,7 @@ onMounted(load);
           <p v-if="active.length === 0" class="panel-empty">
             还没有物品，<RouterLink to="/items/new">记一笔</RouterLink>开始。
           </p>
-          <div v-for="g in detailGroups" :key="g.key" class="ov-group">
+          <div v-for="g in visibleDetailGroups" :key="g.key" class="ov-group">
             <div class="ov-group-head">
               <span class="ov-group-name">{{ g.name }}</span>
               <span class="ov-group-meta">{{ g.items.length }} 件</span>
@@ -267,6 +283,10 @@ onMounted(load);
               <span class="num ov-value">¥{{ formatAmount(valueOf(item)) }}</span>
             </a>
           </div>
+          <!-- O-1：尾部剩余提示（明细是摘要层，全量去库存页） -->
+          <RouterLink v-if="detailHidden > 0" class="ov-more" to="/inventory">
+            还有 {{ detailHidden }} 件，去全部库存 →
+          </RouterLink>
         </div>
         <div class="side-col">
           <div class="panel enter" style="animation-delay: 220ms">
@@ -471,6 +491,18 @@ onMounted(load);
 .ov-group-meta {
   font-size: 12px;
   color: var(--color-muted);
+}
+/* O-1：明细尾部剩余提示 */
+.ov-more {
+  display: block;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--color-muted);
+  text-decoration: none;
+  transition: color 150ms ease-out;
+}
+.ov-more:hover {
+  color: var(--color-ink);
 }
 .ov-row {
   display: grid;

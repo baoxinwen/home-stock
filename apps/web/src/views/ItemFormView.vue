@@ -3,18 +3,12 @@ import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from '../api';
 import { findItem } from '../api/queries';
+import BackButton from '../components/BackButton.vue';
 import { useItemForm, emptyForm, formFromItem } from '../composables/useItemForm';
 
 const route = useRoute();
 const router = useRouter();
 const editId = route.params.id ? Number(route.params.id) : null;
-
-/** 返回：有历史可退则 back，否则回首页（深链/新标签直开无历史，M17 移植） */
-function goBack(): void {
-  const state = router.options.history.state as { back?: string | null } | null;
-  if (state && state.back != null) router.back();
-  else void router.push('/');
-}
 
 const {
   form,
@@ -106,7 +100,7 @@ async function submitAndAgain(): Promise<void> {
 <template>
   <div class="form-view">
     <header class="page-head">
-      <button class="back-btn" type="button" @click="goBack">‹ 返回</button>
+      <BackButton />
       <h1 class="page-title">{{ editId === null ? '记一笔' : '编辑物品' }}</h1>
       <button v-if="editId === null" class="link-btn head-action" type="button" @click="openHistory">从历史复制</button>
     </header>
@@ -276,17 +270,6 @@ async function submitAndAgain(): Promise<void> {
 /* 「从历史复制」仍靠右：左侧返回+标题，右侧保留上下文操作位 */
 .page-head .head-action {
   margin-left: auto;
-}
-.back-btn,
-.link-btn {
-  background: none;
-  border: none;
-  font: inherit;
-  font-size: 14px;
-  color: var(--color-muted);
-  cursor: pointer;
-  padding: 0;
-  border-bottom: 1px solid var(--color-border);
 }
 .form {
   display: grid;

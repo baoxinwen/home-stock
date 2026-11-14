@@ -144,9 +144,12 @@ button svg,
   vertical-align: -0.125em;
 }
 
-/* 体检表 P0-1：按钮基底无边框（codemod 删边框后 UA 默认 2px outset 击穿了去边框语言） */
+/* 体检表 P0-1：按钮基底无边框（codemod 删边框后 UA 默认 2px outset 击穿了去边框语言）。
+   2026-11-13 补 background 维度：UA ButtonFace 底从「透明图标钮」（铃铛）上泄露——
+   同元素是 <a> 时无此底色，并排出现形式不一致；所有显式底色的按钮不受影响 */
 button {
   border: none;
+  background: none;
 }
 
 /* 体检表 P1-5：ink 实底按钮 hover / 按压态（铁律 9：按压 scale 无位移）
@@ -202,7 +205,9 @@ h3 {
 }
 
 #app {
+  /* 细节轮 D-3：dvh 防移动地址栏伸缩跳动（不支持 dvh 的旧浏览器由上一行兜底） */
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .app-shell {
@@ -303,12 +308,16 @@ h3 {
   background: none;
   border: none;
   border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 13px;
+  padding: 6px 14px;
+  font-size: 12px;
   color: var(--color-muted);
   cursor: pointer;
   text-decoration: none;
   transition: transform 120ms ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
 }
 .tab-item:active {
   transform: scale(0.98);
@@ -316,6 +325,24 @@ h3 {
 .tab-item.router-link-active {
   color: var(--color-ink);
   font-weight: 600;
+}
+/* 2026-11-13 细节轮 E3（M-9）：icon+label 双行，徽章挂图标右上角 */
+.tab-icon {
+  position: relative;
+  display: inline-flex;
+}
+.tab-icon svg {
+  width: 20px;
+  height: 20px;
+}
+.tab-icon .tab-badge {
+  position: absolute;
+  top: -3px;
+  right: -8px;
+  margin: 0;
+}
+.tab-label {
+  line-height: 1;
 }
 
 /* 页面标题 */
@@ -378,8 +405,8 @@ h3 {
 /* 底部 tabbar 6 项（总览/库存/通知/清单/统计/设置）：窄屏收紧内边距 */
 @media (max-width: 420px) {
   .tab-item {
-    padding: 8px 9px;
-    font-size: 12px;
+    padding: 6px 9px;
+    font-size: 11px;
   }
 }
 
@@ -402,6 +429,52 @@ h3 {
   padding: 2px 5px;
   margin-left: 2px;
   vertical-align: 2px;
+}
+
+/* 2026-11-13 细节轮 D-5：空态卡片语言全局化（原 NotificationContent scoped，
+   库存页筛选空态为第二处使用）——surface 卡 + 图标 + 主副文案 */
+.empty-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-l);
+  padding: 44px 24px;
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  text-align: center;
+}
+.empty-icon {
+  font-size: 40px;
+  line-height: 1;
+}
+.empty-title {
+  font-size: 15px;
+  font-weight: var(--fw-semibold);
+  color: var(--color-ink);
+  margin: 0;
+}
+.empty-sub {
+  font-size: 13px;
+  color: var(--color-muted);
+  margin: 0;
+}
+
+/* 2026-11-13 细节轮 D-2：全站文字钮统一——去下划线（与去边框语言一致）、hover 浅底；
+   与 BackButton 构成一致的 ghost 文字钮族，此前 3 处 scoped 重复定义废弃 */
+.link-btn {
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--color-muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-s);
+  text-decoration: none;
+  transition: background 150ms ease-out, color 150ms ease-out;
+}
+.link-btn:hover {
+  background: var(--color-field);
+  color: var(--color-ink);
 }
 
 /* 2026-11-12 移动端审查 M-10/M-11：筛选 chips 与设置 tab 导航窄屏横向滑动，

@@ -10,16 +10,10 @@ import { useRouter } from 'vue-router';
 import type { BackupFileDto, NotifyChannel, SettingsDto } from '@home-stock/shared';
 import { api } from '../api';
 import { clearStoredToken } from '../auth/token';
+import BackButton from '../components/BackButton.vue';
 import { useTheme, type ThemePreference } from '../composables/useTheme';
 
 const router = useRouter();
-
-/** 返回：有历史可退则 back（顶栏齿轮进入），否则回总览（深链/新标签直开无历史，同通知页） */
-function goBack(): void {
-  const state = router.options.history.state as { back?: string | null } | null;
-  if (state && state.back != null) router.back();
-  else void router.push('/');
-}
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
@@ -465,7 +459,7 @@ onMounted(() => {
   <div class="settings">
     <header class="page-head">
       <!-- 2026-11-13 设置移出一级导航（顶栏齿轮进入），补返回导航 -->
-      <button class="back-btn" type="button" @click="goBack">‹ 返回</button>
+      <BackButton />
       <h1 class="page-title">设置</h1>
       <span class="head-tail">
       <!-- 访问口令不设独立 tab（口令由部署环境变量控制，应用内无修改入口）：退出登录降级为页头动作 -->
@@ -861,16 +855,6 @@ onMounted(() => {
   align-items: baseline;
   gap: 12px; /* 2026-11-13 设置移出一级导航：返回+标题左对齐（同归档/通知页语言） */
   margin-bottom: 16px;
-}
-.back-btn {
-  background: none;
-  border: none;
-  font: inherit;
-  font-size: 14px;
-  color: var(--color-muted);
-  cursor: pointer;
-  padding: 0;
-  border-bottom: 1px solid var(--color-border);
 }
 .head-tail {
   margin-left: auto;

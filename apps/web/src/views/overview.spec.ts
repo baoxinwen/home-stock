@@ -172,6 +172,32 @@ describe('OverviewView 模块', () => {
     document.querySelector('.drawer-root')?.remove(); // 清理 teleported 节点
   });
 
+  it('明细限前 8 条：跨组累计截断，尾部剩余提示指向库存页（2026-11-13 O-1）', async () => {
+    const many = Array.from({ length: 11 }, (_, i) =>
+      makeItem({ id: i + 1, name: `物品${i + 1}`, categoryId: 1, effectiveExpiryDate: daysFromToday(30), expiryStatus: 'ok' }),
+    );
+    vi.mocked(api.listItems).mockReset().mockImplementation(async (query = {}) =>
+      query.status === 'archived' ? [] : many,
+    );
+    const { wrapper } = await mountView();
+
+    const rows = wrapper.findAll('.ov-row');
+    expect(rows).toHaveLength(8);
+    expect(wrapper.find('.ov-more').text()).toContain('还有 3 件');
+    expect(wrapper.find('.ov-more').attributes('href')).toBe('/inventory');
+  });
+
+  it('不足 8 件时不出现尾部剩余提示', async () => {
+    vi.mocked(api.listItems).mockReset().mockImplementation(async (query = {}) =>
+      query.status === 'archived'
+        ? []
+        : [makeItem({ id: 1, name: '鸡蛋', categoryId: 1, effectiveExpiryDate: daysFromToday(20), expiryStatus: 'ok' })],
+    );
+    const { wrapper } = await mountView();
+    expect(wrapper.findAll('.ov-row')).toHaveLength(1);
+    expect(wrapper.find('.ov-more').exists()).toBe(false);
+  });
+
   it('最近动态按时间倒序、带去向徽章与金额；类别价值分布渲染', async () => {
     vi.mocked(api.listItems).mockReset().mockImplementation(async (query = {}) =>
       query.status === 'archived'

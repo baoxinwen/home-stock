@@ -470,15 +470,7 @@ async function doDelete(): Promise<void> {
   font-size: 13px;
   color: var(--color-muted);
 }
-.link-btn {
-  background: none;
-  border: none;
-  font: inherit;
-  font-size: 14px;
-  color: var(--color-muted);
-  cursor: pointer;
-  padding: 4px 0;
-}
+/* .link-btn 全局化（2026-11-13 细节轮 D-2，main.css 接管去下划线+hover） */
 .confirm-text {
   font-size: 14px;
   color: var(--color-text);

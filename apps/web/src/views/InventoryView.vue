@@ -8,6 +8,7 @@ import { formatDateCN, todayISO } from '../lib/dates';
 import { needsExpiryDate } from '../lib/needs-expiry';
 import { useInventory } from '../composables/useInventory';
 import { useMediaQuery } from '../composables/useMediaQuery';
+import ChevronIcon from '../components/ChevronIcon.vue';
 import ItemDrawer from '../components/ItemDrawer.vue';
 
 const router = useRouter();
@@ -363,10 +364,17 @@ onMounted(() => {
 
     <p v-if="error" class="error-text" role="alert">{{ error }}</p>
     <p v-else-if="loading && items.length === 0" class="muted-text">加载中…</p>
-    <p v-else-if="items.length === 0" class="muted-text">
-      {{ isDesktop ? '还没有物品，点右上角「＋ 记一笔」开始。' : '还没有物品，点右下角「记一笔」开始。' }}
-    </p>
-    <p v-else-if="displayed.length === 0" class="muted-text">没有符合筛选条件的物品。</p>
+    <!-- 细节轮 D-5：空态卡片化（与清单/通知同语言，样式已全局化 main.css） -->
+    <div v-else-if="items.length === 0" class="empty-card">
+      <div class="empty-icon" aria-hidden="true">📦</div>
+      <p class="empty-title">还没有物品</p>
+      <p class="empty-sub">{{ isDesktop ? '点右上角「＋ 记一笔」开始' : '点右下角「记一笔」开始' }}</p>
+    </div>
+    <div v-else-if="displayed.length === 0" class="empty-card">
+      <div class="empty-icon" aria-hidden="true">🔍</div>
+      <p class="empty-title">没有符合筛选条件的物品</p>
+      <p class="empty-sub">换个状态或类别筛选试试</p>
+    </div>
 
     <!-- PC：表格化宽行 -->
     <div v-else-if="isDesktop" class="inv-table" role="list" aria-label="库存列表">
@@ -392,7 +400,7 @@ onMounted(() => {
             :aria-expanded="isExpanded(group.name)"
             @click="toggleGroup(group.name)"
           >
-            <span class="inv-group-chevron" aria-hidden="true">{{ isExpanded(group.name) ? '▾' : '▸' }}</span>
+            <span class="inv-group-chevron" aria-hidden="true"><ChevronIcon :rotate="isExpanded(group.name) ? 90 : 0" /></span>
             <span class="inv-name-wrap">
               <span class="item-name">{{ group.name }}<em class="inv-batches">（{{ group.batches.length }} 批）</em></span>
               <span class="inv-sub">共 {{ groupQuantity(group.batches) }}</span>
@@ -569,7 +577,7 @@ onMounted(() => {
                 · 最近 {{ earliestDaysText(group.batches) }}
               </span>
             </span>
-            <span class="inv-group-chevron" aria-hidden="true">{{ isExpanded(group.name) ? '▾' : '▸' }}</span>
+            <span class="inv-group-chevron" aria-hidden="true"><ChevronIcon :rotate="isExpanded(group.name) ? 90 : 0" /></span>
           </button>
           <ul v-if="isExpanded(group.name)" class="batch-list">
             <li v-for="b in group.batches" :key="b.id" class="batch-row">
