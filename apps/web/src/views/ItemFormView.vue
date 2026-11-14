@@ -207,16 +207,16 @@ async function submitAndAgain(): Promise<void> {
               </datalist>
             </label>
           </div>
-          <div class="field-row">
-            <label class="field">
-              <span class="label">购买日期</span>
-              <input v-model="form.purchaseDate" type="date" />
-            </label>
-            <label class="field">
-              <span class="label">单价（元）</span>
-              <input v-model="form.price" type="number" min="0" step="0.01" placeholder="选填" />
-            </label>
-          </div>
+        <div class="field-row row-date">
+          <label class="field">
+            <span class="label">购买日期</span>
+            <input v-model="form.purchaseDate" type="date" />
+          </label>
+          <label class="field">
+            <span class="label">单价（元）</span>
+            <input v-model="form.price" type="number" min="0" step="0.01" placeholder="选填" />
+          </label>
+        </div>
         </section>
 
         <section class="form-card">
@@ -448,32 +448,31 @@ async function submitAndAgain(): Promise<void> {
   display: flex;
   gap: 12px;
 }
-/* 输入框长度匹配内容（转库存审查）：日期 180 / 数字 160 / 下拉 240 / 单位 110；
-   名称保持 560（基础信息主输入）。属性选择器特异性高于尾部 .field input 560 兜底 */
-.field input[type='date'] {
-  max-width: 180px;
+/* 2026-11-14 对齐修复：宽度控制从 input 限宽移到 field-row 的 grid 轨道——
+   input 一律填满轨道，行右端与名称框平齐（限宽 input 左对齐导致的参差是根因） */
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
-.field input[type='number'] {
-  max-width: 160px;
+/* 类别 | 数量 | 单位：类别吃剩余，数量/单位窄轨固定 */
+.row-basic {
+  grid-template-columns: minmax(0, 1fr) 110px 110px;
 }
-.field select {
-  max-width: 240px;
-}
-.field .input-unit {
-  max-width: 110px;
-}
-/* 类别承载中文分类名可宽些，数量/单位窄（原型 1.4/0.8/0.8） */
-.row-basic .field:nth-child(1) {
-  flex: 1.4;
-}
-.row-basic .field:nth-child(2),
-.row-basic .field:nth-child(3) {
-  flex: 0.8;
+/* 购买日期 | 单价：日期窄轨，单价吃剩余 */
+.row-date {
+  grid-template-columns: 200px minmax(0, 1fr);
 }
 /* 2026-11-14 融合布局：窄屏单列（主栏→辅栏顺序流），三窄字段在辅卡纵排，
    M-6 的换行诉求由纵排天然满足 */
 @media (max-width: 767px) {
   .form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* 窄屏字段行单列纵排（大厂移动表单惯例），固定窄轨随之放开 */
+  .field-row,
+  .row-basic,
+  .row-date {
     grid-template-columns: minmax(0, 1fr);
   }
   .form-actions {
@@ -503,7 +502,7 @@ select:focus {
 .expiry-group {
   border: none;
   display: grid;
-  gap: 8px;
+  gap: 14px; /* 细节轮：卡内纵向节奏统一 14px（原 8px 偏紧） */
 }
 .mode-switch {
   display: flex;
