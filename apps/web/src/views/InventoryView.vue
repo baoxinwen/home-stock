@@ -658,6 +658,11 @@ onMounted(() => {
   gap: 2px;
   min-width: 0;
 }
+/* 评审 L-M2：静态「库存总价值」卡与 7 个筛选按钮同形同色，形成死点击区——
+   沉一档明度（同 inv-group-row 分层语言）与可点卡拉开 */
+div.ov-card {
+  background: var(--color-field);
+}
 button.ov-card {
   font: inherit;
   text-align: left;

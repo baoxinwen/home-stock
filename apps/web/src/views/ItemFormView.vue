@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { nextTick, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from '../api';
 import { findItem } from '../api/queries';
@@ -118,10 +118,23 @@ function removeImage(): void {
   uploadError.value = '';
 }
 
+/** 评审 A-M6：首个无效字段标 aria-invalid 并移焦（SR 听到错误即落在出错字段上） */
+const formEl = ref<HTMLFormElement | null>(null);
+const invalidField = ref('');
+
+async function failValidation(built: Extract<ReturnType<typeof toPayload>, { ok: false }>): Promise<void> {
+  error.value = built.message;
+  invalidField.value = built.field ?? '';
+  await nextTick();
+  if (invalidField.value) {
+    formEl.value?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+  }
+}
+
 async function submit(): Promise<void> {
   const built = toPayload();
   if (!built.ok) {
-    error.value = built.message;
+    await failValidation(built);
     return;
   }
   saving.value = true;
@@ -152,7 +165,7 @@ const againNotice = ref('');
 async function submitAndAgain(): Promise<void> {
   const built = toPayload();
   if (!built.ok) {
-    error.value = built.message;
+    await failValidation(built);
     return;
   }
   saving.value = true;
@@ -184,13 +197,21 @@ async function submitAndAgain(): Promise<void> {
 
     <!-- 2026-11-14 融合布局（分区卡片 × 主辅两栏）：左主栏必填动线，右辅栏「更多选项」
          收纳选填项；920px 居中（分区卡片单列贴左撑不起宽屏，用户反馈融合） -->
-    <form class="form" @submit.prevent="submit">
+    <form ref="formEl" class="form" @submit.prevent="submit">
       <div class="form-main">
         <section class="form-card">
           <h2 class="card-title">基础信息</h2>
           <label class="field">
             <span class="label">名称 *</span>
-            <input v-model="form.name" type="text" required placeholder="如：鲜牛奶" />
+            <!-- 评审 A-M6：校验失败字段标 aria-invalid 并关联表单错误文案 -->
+            <input
+              v-model="form.name"
+              type="text"
+              required
+              placeholder="如：鲜牛奶"
+              :aria-invalid="invalidField === 'name' ? 'true' : undefined"
+              :aria-describedby="invalidField === 'name' ? 'form-error' : undefined"
+            />
           </label>
           <div class="field-row row-basic">
             <label class="field">
@@ -202,7 +223,14 @@ async function submitAndAgain(): Promise<void> {
             </label>
             <label class="field">
               <span class="label">数量</span>
-              <input v-model.number="form.quantity" type="number" min="0" step="any" />
+              <input
+                v-model.number="form.quantity"
+                type="number"
+                min="0"
+                step="any"
+                :aria-invalid="invalidField === 'quantity' ? 'true' : undefined"
+                :aria-describedby="invalidField === 'quantity' ? 'form-error' : undefined"
+              />
             </label>
             <label class="field">
               <span class="label">单位</span>
@@ -260,7 +288,12 @@ async function submitAndAgain(): Promise<void> {
             </div>
             <label v-if="form.expiryMode === 'direct'" class="field">
               <span class="label">过期日期</span>
-              <input v-model="form.expiryDate" type="date" />
+              <input
+                v-model="form.expiryDate"
+                type="date"
+                :aria-invalid="invalidField === 'expiryDate' ? 'true' : undefined"
+                :aria-describedby="invalidField === 'expiryDate' ? 'form-error' : undefined"
+              />
             </label>
             <p v-else-if="form.expiryMode === 'none'" class="computed-hint">
               长期存储品（如酒、干货）不设保质期，不参与临期/过期提醒
@@ -268,11 +301,23 @@ async function submitAndAgain(): Promise<void> {
             <div v-else class="field-row">
               <label class="field">
                 <span class="label">生产日期</span>
-                <input v-model="form.productionDate" type="date" />
+                <input
+                  v-model="form.productionDate"
+                  type="date"
+                  :aria-invalid="invalidField === 'productionDate' ? 'true' : undefined"
+                  :aria-describedby="invalidField === 'productionDate' ? 'form-error' : undefined"
+                />
               </label>
               <label class="field">
                 <span class="label">保质期（天）</span>
-                <input v-model="form.shelfLifeDays" type="number" min="1" step="1" />
+                <input
+                  v-model="form.shelfLifeDays"
+                  type="number"
+                  min="1"
+                  step="1"
+                  :aria-invalid="invalidField === 'productionDate' ? 'true' : undefined"
+                  :aria-describedby="invalidField === 'productionDate' ? 'form-error' : undefined"
+                />
               </label>
             </div>
             <p v-if="form.expiryMode === 'shelf' && computedExpiry" class="computed-hint">
@@ -281,7 +326,7 @@ async function submitAndAgain(): Promise<void> {
           </fieldset>
         </section>
 
-        <p v-if="error" class="error-text" role="alert">{{ error }}</p>
+        <p id="form-error" v-if="error" class="error-text" role="alert">{{ error }}</p>
 
         <!-- 审查 F-1：主/次保存按钮并排（原全宽黑条 + 半宽灰条主次失衡） -->
         <div class="form-actions">

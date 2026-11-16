@@ -145,10 +145,11 @@ export function useItemForm(existing: ItemDto | null = null) {
     historyOpen.value = false;
   }
 
-  /** 校验并组装 create/update 请求体。 */
-  function toPayload(): { ok: true; payload: ItemCreateDto } | { ok: false; message: string } {
+  /** 校验并组装 create/update 请求体。field 标识首个无效字段（评审 A-M6：视图据此
+   *  标 aria-invalid / aria-describedby 并移焦，SR 听到错误即落在出错字段上）。 */
+  function toPayload(): { ok: true; payload: ItemCreateDto } | { ok: false; message: string; field?: string } {
     const f = form.value;
-    if (!f.name.trim()) return { ok: false, message: '名称必填' };
+    if (!f.name.trim()) return { ok: false, message: '名称必填', field: 'name' };
     // 过期方式三档：none 显式声明长期存储（null）；direct/shelf 档算不出有效日期一律拦截，
     // 杜绝「漏填静默降级为长期品」——null 只能来自用户显式选择
     const expiry =
@@ -158,17 +159,17 @@ export function useItemForm(existing: ItemDto | null = null) {
           ? computeExpiryFromShelfLife(f.productionDate || null, f.shelfLifeDays === '' ? null : Number(f.shelfLifeDays))
           : f.expiryDate || null;
     if (f.expiryMode === 'shelf' && !expiry) {
-      return { ok: false, message: '请填写生产日期和保质期时长' };
+      return { ok: false, message: '请填写生产日期和保质期时长', field: 'productionDate' };
     }
     if (f.expiryMode === 'direct' && !expiry) {
-      return { ok: false, message: '请填写过期日期，或改选长期存储' };
+      return { ok: false, message: '请填写过期日期，或改选长期存储', field: 'expiryDate' };
     }
     const numOrNull = (v: string): number | null => (v === '' ? null : Number(v));
     // 数量：空串默认 1，0 合法保留，非数字报校验错误（不许 || 1 吞掉 0）
     const quantityRaw = String(f.quantity ?? '').trim();
     const quantity = quantityRaw === '' ? 1 : Number(quantityRaw);
     if (!Number.isFinite(quantity) || quantity < 0) {
-      return { ok: false, message: '数量必须为非负数字' };
+      return { ok: false, message: '数量必须为非负数字', field: 'quantity' };
     }
     const payload: ItemCreateDto & { opened?: number } = {
       name: f.name.trim(),

@@ -5,7 +5,7 @@
  * 分组标签页：顶部 chips 即 tab，点哪个只显示哪个区块（v-show 保持 DOM 常驻，
  * 未保存的表单修改切 tab 不丢）；选中项记入 sessionStorage，回页/刷新后还原。
  */
-import { computed, onMounted, reactive, ref, shallowRef } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, shallowRef } from 'vue';
 import { useRouter } from 'vue-router';
 import type { BackupFileDto, NotifyChannel, SettingsDto } from '@home-stock/shared';
 import { api } from '../api';
@@ -396,13 +396,23 @@ async function logout(): Promise<void> {
   await router.push('/login');
 }
 
+/** 评审 A-M6：首个无效字段标识（days/port），保存失败后据此标 aria-invalid 并移焦 */
+const invalidField = ref('');
+
 function validate(): string {
+  invalidField.value = '';
   const days = Number(form.default_remind_days);
-  if (!Number.isInteger(days) || days <= 0) return '提醒阈值必须为正整数';
+  if (!Number.isInteger(days) || days <= 0) {
+    invalidField.value = 'days';
+    return '提醒阈值必须为正整数';
+  }
   const port = form.email.smtp_port;
   if (port !== '' && port !== null) {
     const p = Number(port);
-    if (!Number.isInteger(p) || p <= 0 || p > 65535) return 'SMTP 端口必须为 1-65535 的整数';
+    if (!Number.isInteger(p) || p <= 0 || p > 65535) {
+      invalidField.value = 'port';
+      return 'SMTP 端口必须为 1-65535 的整数';
+    }
   }
   return '';
 }
@@ -441,7 +451,13 @@ async function save(): Promise<void> {
   }
   formError.value = validate();
   saveOk.value = '';
-  if (formError.value) return;
+  if (formError.value) {
+    // 评审 A-M6：焦点移到首个无效字段
+    void nextTick(() => {
+      document.getElementById(invalidField.value === 'port' ? 'email-smtp-port' : 'default-remind-days')?.focus();
+    });
+    return;
+  }
   saving.value = true;
   try {
     fill(await api.updateSettings(buildPayload()));
@@ -529,7 +545,7 @@ onMounted(() => {
       </button>
     </nav>
 
-    <p v-if="formError" class="form-error" role="alert">{{ formError }}</p>
+    <p id="settings-form-error" v-if="formError" class="form-error" role="alert">{{ formError }}</p>
     <p v-else class="form-ok" role="status"><template v-if="saveOk">{{ saveOk }}</template></p>
 
     <form class="settings-form" @submit.prevent="save">
@@ -572,7 +588,15 @@ onMounted(() => {
         </label>
         <label class="field">
           <span class="label">全局默认提醒阈值（天）</span>
-          <input id="default-remind-days" v-model.number="form.default_remind_days" type="number" min="1" max="3650" />
+          <input
+            id="default-remind-days"
+            v-model.number="form.default_remind_days"
+            type="number"
+            min="1"
+            max="3650"
+            :aria-invalid="invalidField === 'days' ? 'true' : undefined"
+            :aria-describedby="invalidField === 'days' ? 'settings-form-error' : undefined"
+          />
         </label>
         <label class="field switch">
           <span class="label">过期物品自动归档</span>
@@ -610,7 +634,16 @@ onMounted(() => {
               </label>
               <label class="field">
                 <span class="label">端口</span>
-                <input id="email-smtp-port" v-model="form.email.smtp_port" type="number" min="1" max="65535" placeholder="465" />
+                <input
+                  id="email-smtp-port"
+                  v-model="form.email.smtp_port"
+                  type="number"
+                  min="1"
+                  max="65535"
+                  placeholder="465"
+                  :aria-invalid="invalidField === 'port' ? 'true' : undefined"
+                  :aria-describedby="invalidField === 'port' ? 'settings-form-error' : undefined"
+                />
               </label>
               <label class="field switch">
                 <span class="label">SSL/TLS</span>

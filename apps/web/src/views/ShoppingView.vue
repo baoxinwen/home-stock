@@ -4,7 +4,7 @@
  * 预计花费合计、已完成区折叠、低库存补货建议（minQuantity 联动）。
  * converted 项不在主视图展示，仅用于「清空已完成」。
  */
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { CategoryDto, ItemDto, ShoppingItemDto } from '@home-stock/shared';
 import { api } from '../api';
@@ -96,22 +96,35 @@ function messageOf(e: unknown, fallback: string): string {
 
 /** W-M3：添加 in-flight 守卫——挂起中按钮禁用，快速双击不重复创建 */
 const adding = ref(false);
+/** 评审 A-M6：首个无效字段（name/price），失败时标 aria-invalid 并移焦 */
+const invalidField = ref('');
+
+function focusInvalid(): void {
+  void nextTick(() => {
+    document.getElementById(invalidField.value === 'price' ? 'shopping-price' : 'shopping-name')?.focus();
+  });
+}
 
 async function add(): Promise<void> {
   if (adding.value) return;
   const trimmed = name.value.trim();
   if (!trimmed) {
     error.value = '请先填写名称';
+    invalidField.value = 'name';
+    focusInvalid();
     return;
   }
   const qty = typeof quantity.value === 'number' ? quantity.value : Number(quantity.value);
   const priceNum = price.value === '' ? null : Number(price.value);
   if (priceNum !== null && (!Number.isFinite(priceNum) || priceNum < 0)) {
     error.value = '单价必须为非负数字';
+    invalidField.value = 'price';
+    focusInvalid();
     return;
   }
   const categoryNum = categoryId.value === '' ? null : Number(categoryId.value);
   error.value = '';
+  invalidField.value = '';
   notice.value = '';
   confirmingClear.value = false;
   adding.value = true;
@@ -244,12 +257,15 @@ onMounted(async () => {
     <!-- 体检表 P0-2：PC 单行网格（名称1fr/数量64/单位88/单价112/类别150/添加auto），窄屏回落两行 -->
     <form class="add-form" @submit.prevent="add">
       <input
+        id="shopping-name"
         v-model="name"
         class="add-name"
         type="text"
         placeholder="要买什么？"
         aria-label="物品名称"
         maxlength="100"
+        :aria-invalid="invalidField === 'name' ? 'true' : undefined"
+        :aria-describedby="invalidField === 'name' ? 'shopping-error' : undefined"
       />
       <input
         v-model.number="quantity"
@@ -263,6 +279,7 @@ onMounted(async () => {
       <!-- 审查 L-1：placeholder 收短防 66px/112px 列截断（可选语义保留在 aria-label） -->
       <input v-model="unit" class="add-unit" type="text" aria-label="单位（可选）" placeholder="如 盒" />
       <input
+        id="shopping-price"
         v-model.number="price"
         class="add-price"
         type="number"
@@ -270,6 +287,8 @@ onMounted(async () => {
         step="0.01"
         aria-label="单价（选填，元）"
         placeholder="选填"
+        :aria-invalid="invalidField === 'price' ? 'true' : undefined"
+        :aria-describedby="invalidField === 'price' ? 'shopping-error' : undefined"
       />
       <select v-model="categoryId" class="add-category" aria-label="类别">
         <option value="">不选类别</option>
@@ -278,7 +297,7 @@ onMounted(async () => {
       <button class="add-submit" type="submit" :disabled="adding">添加</button>
     </form>
 
-    <p v-if="error" class="error-text" role="alert">{{ error }}</p>
+    <p id="shopping-error" v-if="error" class="error-text" role="alert">{{ error }}</p>
     <!-- 单件转库存已改为跳转表单确认（按表单内容入库），批量一键完成后仅文字提示。
          评审 A-M5/A-L6：notice 改稳定 polite 区（常驻渲染只更新文本，空态零占位） -->
     <p class="notice-text" role="status"><template v-if="notice">{{ notice }}</template></p>
