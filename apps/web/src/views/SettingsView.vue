@@ -1042,6 +1042,9 @@ onMounted(() => {
 }
 .channel-block {
   display: grid;
+  /* 2026-11-16 窄屏溢出修复：auto 轨道按 max-content 拉伸，发送日志 nowrap 长行
+     会把渠道块撑破容器（375 视口溢出 118px）；minmax(0,1fr) 让轨道不超容器 */
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 }
 .channel-block .sub-title {
@@ -1225,6 +1228,8 @@ onMounted(() => {
   margin: 0;
   padding: 0;
   display: grid;
+  /* 同渠道块：auto 轨道会被 nowrap 长日志的 max-content 撑破，限制不超容器 */
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
 }
 .log-item {
@@ -1242,6 +1247,8 @@ onMounted(() => {
   color: var(--tone-red-fg);
 }
 .log-message {
+  flex: 1;
+  min-width: 0; /* 细节轮：允许收缩，nowrap 长日志不再撑破窄屏（溢出 118px 根因） */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
