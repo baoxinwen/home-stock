@@ -302,10 +302,9 @@ onMounted(() => {
     <header class="page-head">
       <h1 class="page-title">库存</h1>
       <div class="head-actions">
+        <!-- 2026-11-16 审查：删页头「＋记一笔」——与顶栏常驻 CTA 同文案垂直重复
+             （Gmail/Linear 惯例：全局 CTA 常驻导航，页面不重复） -->
         <RouterLink class="archive-link" to="/archive">归档记录</RouterLink>
-        <button v-if="isDesktop" class="add-btn" type="button" @click="router.push('/items/new')">
-          ＋ 记一笔
-        </button>
       </div>
     </header>
 
@@ -621,21 +620,18 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
 }
+/* 归档记录链接：去下划线（细节轮 D-2 同族），hover 浅底与全站文字钮一致 */
 .archive-link {
   font-size: 13px;
   color: var(--color-muted);
   text-decoration: none;
-  border-bottom: 1px solid var(--color-border);
+  padding: 3px 8px;
+  border-radius: var(--radius-s);
+  transition: background 150ms ease-out, color 150ms ease-out;
 }
-.add-btn {
-  background: var(--color-ink);
-  color: var(--color-on-ink);
-  border: none;
-  border-radius: var(--radius-m);
-  padding: 8px 14px;
-  font-size: 14px;
-  font-weight: var(--fw-semibold);
-  cursor: pointer;
+.archive-link:hover {
+  background: var(--color-field);
+  color: var(--color-ink);
 }
 
 /* 概览条 = 状态筛选入口（2026-11-11 审查 I-2）：卡片可点击，激活态用双环（对齐铁律 2 语言） */

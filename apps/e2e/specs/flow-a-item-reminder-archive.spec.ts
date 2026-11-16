@@ -14,7 +14,8 @@ test('录入→临期提醒→去重→过期自动归档→浪费统计', async
   // ---- 1. UI 录入物品（M1.1）：过期日 = 明天，其余字段合理 ----
   // 仪表盘架构：`/` 为总览，库存独立 /inventory（desktop-only，页头「＋ 记一笔」）
   await page.goto('/inventory');
-  await page.getByRole('main').getByRole('button', { name: '＋ 记一笔' }).click();
+  // 2026-11-16 审查：页头记一笔已删（与顶栏重复），顶栏常驻 CTA 触发
+  await page.getByRole('button', { name: '＋ 记一笔' }).click();
   await expect(page.locator('h1.page-title')).toHaveText('记一笔');
   await page.locator('input[placeholder="如：鲜牛奶"]').fill('牛奶E2E');
   await page.getByLabel('数量').fill('2');
@@ -59,7 +60,8 @@ test('录入→临期提醒→去重→过期自动归档→浪费统计', async
 
   // ---- 4. 录入过期物品（过期日 = 昨天）→ run → 自动归档「过期丢弃」（M4.1） ----
   await page.getByRole('link', { name: '库存', exact: true }).click();
-  await page.getByRole('main').getByRole('button', { name: '＋ 记一笔' }).click();
+  // 2026-11-16 审查：页头记一笔已删（与顶栏重复），顶栏常驻 CTA 触发
+  await page.getByRole('button', { name: '＋ 记一笔' }).click();
   await expect(page.locator('h1.page-title')).toHaveText('记一笔');
   await page.locator('input[placeholder="如：鲜牛奶"]').fill('酸奶E2E');
   await page.getByLabel('数量').fill('1');
