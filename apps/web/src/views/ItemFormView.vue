@@ -229,10 +229,12 @@ async function submitAndAgain(): Promise<void> {
           <fieldset class="field expiry-group">
             <legend class="label">过期方式</legend>
             <div class="mode-switch">
+              <!-- 评审 A-M3：互斥三选的激活态程序化暴露（同项目 aria-pressed 惯例） -->
               <button
                 type="button"
                 class="chip"
                 :class="{ active: form.expiryMode === 'direct' }"
+                :aria-pressed="form.expiryMode === 'direct'"
                 @click="form.expiryMode = 'direct'"
               >
                 直接填过期日期
@@ -241,6 +243,7 @@ async function submitAndAgain(): Promise<void> {
                 type="button"
                 class="chip"
                 :class="{ active: form.expiryMode === 'shelf' }"
+                :aria-pressed="form.expiryMode === 'shelf'"
                 @click="form.expiryMode = 'shelf'"
               >
                 生产日期 + 保质期
@@ -249,6 +252,7 @@ async function submitAndAgain(): Promise<void> {
                 type="button"
                 class="chip"
                 :class="{ active: form.expiryMode === 'none' }"
+                :aria-pressed="form.expiryMode === 'none'"
                 @click="form.expiryMode = 'none'"
               >
                 长期存储
@@ -289,7 +293,8 @@ async function submitAndAgain(): Promise<void> {
             保存并再记一笔
           </button>
         </div>
-        <p v-if="againNotice" class="again-notice" role="status">{{ againNotice }}</p>
+        <!-- 评审 A-L6：稳定 polite 区（常驻渲染，避免动态插入播报不稳） -->
+        <p class="again-notice" role="status"><template v-if="againNotice">{{ againNotice }}</template></p>
       </div>
 
       <aside class="form-side">
@@ -737,6 +742,10 @@ select:focus {
 .again-notice {
   color: var(--tone-green-fg);
   font-size: 14px;
+  margin: 0;
+}
+/* 评审 A-L6：空态零占位 */
+.again-notice:empty {
   margin: 0;
 }
 </style>

@@ -279,8 +279,9 @@ onMounted(async () => {
     </form>
 
     <p v-if="error" class="error-text" role="alert">{{ error }}</p>
-    <!-- 单件转库存已改为跳转表单确认（按表单内容入库），批量一键完成后仅文字提示 -->
-    <p v-if="notice" class="notice-text">{{ notice }}</p>
+    <!-- 单件转库存已改为跳转表单确认（按表单内容入库），批量一键完成后仅文字提示。
+         评审 A-M5/A-L6：notice 改稳定 polite 区（常驻渲染只更新文本，空态零占位） -->
+    <p class="notice-text" role="status"><template v-if="notice">{{ notice }}</template></p>
 
     <p v-if="loading && items.length === 0" class="muted-text">加载中…</p>
     <p v-else-if="pendingItems.length === 0 && doneItems.length === 0" class="empty-state">
@@ -602,6 +603,10 @@ onMounted(async () => {
   color: var(--tone-green-fg);
   font-size: 14px;
   padding: 8px 0;
+}
+/* 评审 A-L6：空态零占位（元素常驻但不占版面） */
+.notice-text:empty {
+  padding: 0;
 }
 </style>
 <style scoped>

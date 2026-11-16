@@ -346,6 +346,7 @@ onMounted(() => {
       <button
         class="chip"
         :class="{ active: activeCategory === null }"
+        :aria-pressed="activeCategory === null"
         type="button"
         @click="toggleCategory(null)"
       >
@@ -356,6 +357,7 @@ onMounted(() => {
         :key="c.id"
         class="chip"
         :class="{ active: activeCategory === c.id }"
+        :aria-pressed="activeCategory === c.id"
         type="button"
         @click="toggleCategory(c.id)"
       >
@@ -379,7 +381,8 @@ onMounted(() => {
 
     <!-- PC：表格化宽行 -->
     <div v-else-if="isDesktop" class="inv-table" role="list" aria-label="库存列表">
-      <div class="inv-thead" aria-hidden="true">
+      <!-- 评审 A-M4：列名保留在无障碍树作行内容阅读参照（此前 aria-hidden 主动移除） -->
+      <div class="inv-thead">
         <span>物品</span>
         <span>类别</span>
         <span>数量</span>
@@ -421,7 +424,8 @@ onMounted(() => {
             class="inv-row inv-batch-row"
             role="listitem"
           >
-            <button class="inv-name-btn" type="button" :aria-label="`查看批次 ${item.name}`" @click="openDetail(item)">
+            <!-- 评审 A-M7：可访问名称必须包含可见文本（日期），语音指令才能命中 -->
+            <button class="inv-name-btn" type="button" :aria-label="`查看批次 ${item.name} ${formatDateCN(item.effectiveExpiryDate ?? item.expiryDate)}`" @click="openDetail(item)">
               <span class="inv-name-wrap" style="padding-left: 14px">
                 <span class="item-name num">{{ formatDateCN(item.effectiveExpiryDate ?? item.expiryDate) }}</span>
                 <span class="inv-sub num">{{ item.quantity }}{{ item.unit ? ` ${item.unit}` : '' }} · 到期 {{ item.effectiveExpiryDate ?? '—' }}</span>

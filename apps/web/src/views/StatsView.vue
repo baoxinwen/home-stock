@@ -44,6 +44,8 @@ const period = ref(currentPeriod());
 const stats = ref<WasteStatsDto | null>(null);
 const loading = ref(true);
 const error = ref('');
+/** 评审 A-M5：月份切换结果稳定播报 */
+const monthAnnounce = ref('');
 
 const baseActive = ref<ItemDto[]>([]);
 const baseArchived = ref<ItemDto[]>([]);
@@ -188,6 +190,8 @@ async function go(delta: number): Promise<void> {
   if (target > currentPeriod()) return;
   period.value = target;
   await load();
+  // 评审 A-M5：月份切换后 KPI/图表静默更新，SR 需要显式确认
+  monthAnnounce.value = `已切换到 ${periodLabel.value}`;
 }
 
 function toneFor(i: number): Tone {
@@ -263,6 +267,7 @@ onMounted(() => {
 
     <p v-if="error" class="error-text" role="alert">{{ error }}</p>
     <p v-else-if="loading && !stats" class="muted-text">加载中…</p>
+    <p class="sr-only" role="status"><template v-if="monthAnnounce">{{ monthAnnounce }}</template></p>
 
     <!-- 仪表盘模块（依赖基础数据，与月份统计解耦）：2×3 六面板
          2026-11-11 图表扩充：浪费/入库合并双柱 + 类别价值环形 + 价值 Top 排行 -->

@@ -83,6 +83,9 @@ void reload();
 
 const unreadShown = computed(() => rows.value.filter((n) => !n.read).length);
 
+/** 评审 A-M5：「全部完成」后列表清空仅剩 🎉 提示，SR 需要显式播报 */
+const announce = ref('');
+
 /** 天数徽章：已过期红、其余黄（与全页 badgeFor 口径一致）。
     通知 type 是发送时快照，物品可能此后才过期——按实时天数修正展示 */
 function daysBadge(n: DisplayRow): { text: string; tone: string } {
@@ -100,6 +103,7 @@ async function markAll(): Promise<void> {
     await api.markNotificationsDone();
     rows.value = [];
     refreshNavBadges();
+    announce.value = '已全部完成，收件箱已清空';
   } catch (e) {
     error.value = e instanceof Error ? e.message : '操作失败';
   } finally {
@@ -147,6 +151,8 @@ watch(
         <span class="notif-pop-title">
           通知
           <span class="notif-pop-count num">未读 {{ unreadShown }}</span>
+          <!-- 评审 A-M5：稳定 polite 区 -->
+          <span class="sr-only" role="status"><template v-if="announce">{{ announce }}</template></span>
         </span>
         <button
           v-if="rows.length > 0"

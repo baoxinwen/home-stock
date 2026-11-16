@@ -149,12 +149,19 @@ onMounted(load);
     />
 
     <div class="chips" role="group" aria-label="归档原因筛选">
-      <button class="chip" :class="{ active: reasonFilter === 'all' }" type="button" @click="setFilter('all')">
+      <button
+        class="chip"
+        :class="{ active: reasonFilter === 'all' }"
+        :aria-pressed="reasonFilter === 'all'"
+        type="button"
+        @click="setFilter('all')"
+      >
         全部
       </button>
       <button
         class="chip"
         :class="{ active: reasonFilter === 'expired_discarded' }"
+        :aria-pressed="reasonFilter === 'expired_discarded'"
         type="button"
         @click="setFilter('expired_discarded')"
       >
@@ -163,6 +170,7 @@ onMounted(load);
       <button
         class="chip"
         :class="{ active: reasonFilter === 'used_up' }"
+        :aria-pressed="reasonFilter === 'used_up'"
         type="button"
         @click="setFilter('used_up')"
       >
@@ -181,7 +189,8 @@ onMounted(load);
         {{ g.label }}<span class="arc-month-count num">{{ g.items.length }} 件</span>
       </h2>
       <div class="arc-table" role="list" :aria-label="`${g.label}归档记录`">
-        <div class="arc-thead" aria-hidden="true">
+        <!-- 评审 A-M4：列名保留在无障碍树 -->
+        <div class="arc-thead">
           <span>物品</span>
           <span>原因</span>
           <span class="arc-h-val">金额</span>

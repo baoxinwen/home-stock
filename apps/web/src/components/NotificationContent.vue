@@ -27,6 +27,8 @@ const loading = ref(true);
 const error = ref('');
 const filter = ref<InboxFilter>('inbox');
 const completing = ref(false);
+/** 评审 A-M5：行内操作结果经稳定 polite 区播报（行悄悄消失时 SR 用户需要确认） */
+const actionNotice = ref('');
 
 const today = todayISO();
 const unread = computed(() => notifications.value.filter((n) => !n.read).length);
@@ -144,6 +146,7 @@ async function complete(n: NotificationDto): Promise<void> {
     n.done = 1;
     n.read = 1;
     emit('read-changed');
+    actionNotice.value = `已完成「${nameOf(n)}」的提醒`;
   } catch (e) {
     error.value = e instanceof Error ? e.message : '操作失败';
   }
@@ -155,6 +158,7 @@ async function restore(n: NotificationDto): Promise<void> {
     await api.undoNotificationsDone([n.id]);
     n.done = 0;
     emit('read-changed');
+    actionNotice.value = `已把「${nameOf(n)}」恢复到收件箱`;
   } catch (e) {
     error.value = e instanceof Error ? e.message : '操作失败';
   }
@@ -176,6 +180,7 @@ async function quickArchive(n: NotificationDto): Promise<void> {
     n.read = 1;
     nameById.value.delete(n.itemId as number);
     emit('read-changed');
+    actionNotice.value = `已归档「${nameOf(n)}」并完成提醒`;
   } catch (e) {
     error.value = e instanceof Error ? e.message : '操作失败';
   } finally {
@@ -210,13 +215,31 @@ onMounted(() => {
   <div class="notif-center">
     <div class="toolbar">
       <div class="chips" role="group" aria-label="通知视图">
-        <button class="chip" :class="{ active: filter === 'inbox' }" type="button" @click="setFilter('inbox')">
+        <button
+          class="chip"
+          :class="{ active: filter === 'inbox' }"
+          :aria-pressed="filter === 'inbox'"
+          type="button"
+          @click="setFilter('inbox')"
+        >
           收件箱 {{ inbox.length }}
         </button>
-        <button class="chip" :class="{ active: filter === 'unread' }" type="button" @click="setFilter('unread')">
+        <button
+          class="chip"
+          :class="{ active: filter === 'unread' }"
+          :aria-pressed="filter === 'unread'"
+          type="button"
+          @click="setFilter('unread')"
+        >
           未读 {{ unread }}
         </button>
-        <button class="chip" :class="{ active: filter === 'done' }" type="button" @click="setFilter('done')">
+        <button
+          class="chip"
+          :class="{ active: filter === 'done' }"
+          :aria-pressed="filter === 'done'"
+          type="button"
+          @click="setFilter('done')"
+        >
           已完成 {{ doneList.length }}
         </button>
       </div>
@@ -235,6 +258,7 @@ onMounted(() => {
     </div>
 
     <p v-if="error" class="error-text" role="alert">{{ error }}</p>
+    <!-- 评审 A-M5/A-L6：稳定 polite 区（常驻渲染，避免动态插入播报不稳） -->
     <p v-else-if="loading && notifications.length === 0" class="muted-text">加载中…</p>
     <!-- B2 空态卡片化：无通知 vs 收件箱清空，主副文案两档 -->
     <div v-else-if="notifications.length === 0" class="empty-card">
@@ -248,6 +272,8 @@ onMounted(() => {
       <p class="empty-sub">收件箱已清空，新提醒会出现在这里</p>
     </div>
     <p v-else-if="groups.length === 0" class="muted-text">没有已完成的记录。</p>
+    <!-- 评审 A-M5/A-L6：稳定 polite 区（常驻渲染，避免动态插入播报不稳） -->
+    <p class="sr-only" role="status"><template v-if="actionNotice">{{ actionNotice }}</template></p>
 
     <section
       v-for="g in groups"

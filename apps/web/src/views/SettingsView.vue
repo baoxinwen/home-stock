@@ -530,7 +530,7 @@ onMounted(() => {
     </nav>
 
     <p v-if="formError" class="form-error" role="alert">{{ formError }}</p>
-    <p v-else-if="saveOk" class="form-ok" role="status">{{ saveOk }}</p>
+    <p v-else class="form-ok" role="status"><template v-if="saveOk">{{ saveOk }}</template></p>
 
     <form class="settings-form" @submit.prevent="save">
       <section id="sec-appearance" v-show="activeTab === 'appearance'" class="card">
@@ -642,9 +642,13 @@ onMounted(() => {
               <button class="ghost-btn" type="button" data-channel="email" :disabled="testing === 'email'" @click="testSend('email')">
                 发送测试邮件
               </button>
-              <p v-if="testResult?.channel === 'email'" class="test-result" :class="{ 'is-error': !testResult.ok }" role="status">
-                {{ testResult.text }}
-              </p>
+              <!-- 评审 A-L6：testResult 改稳定区（常驻渲染，空态零占位） -->
+              <p
+                v-if="!testResult || testResult.channel === 'email'"
+                class="test-result"
+                :class="{ 'is-error': testResult ? !testResult.ok : false }"
+                role="status"
+              ><template v-if="testResult?.channel === 'email'">{{ testResult.text }}</template></p>
             </div>
           </div>
         </div>
@@ -691,9 +695,12 @@ onMounted(() => {
               <button class="ghost-btn" type="button" data-channel="wecom" :disabled="testing === 'wecom'" @click="testSend('wecom')">
                 发送测试消息
               </button>
-              <p v-if="testResult?.channel === 'wecom'" class="test-result" :class="{ 'is-error': !testResult.ok }" role="status">
-                {{ testResult.text }}
-              </p>
+              <p
+                v-if="!testResult || testResult.channel === 'wecom'"
+                class="test-result"
+                :class="{ 'is-error': testResult ? !testResult.ok : false }"
+                role="status"
+              ><template v-if="testResult?.channel === 'wecom'">{{ testResult.text }}</template></p>
             </div>
           </div>
         </div>
@@ -772,7 +779,7 @@ onMounted(() => {
           </div>
         </div>
         <p v-if="backupError" class="backup-error form-error" role="alert">{{ backupError }}</p>
-        <p v-if="backupOk" class="backup-ok form-ok" role="status">{{ backupOk }}</p>
+        <p v-else class="backup-ok form-ok" role="status"><template v-if="backupOk">{{ backupOk }}</template></p>
         <div class="backup-block backup-list-wrap">
           <div class="block-info">
             <h3 class="block-title">备份文件</h3>
@@ -1019,6 +1026,11 @@ onMounted(() => {
   color: var(--tone-green-fg);
   font-size: 14px;
   padding: 8px 0;
+}
+/* 评审 A-L6：稳定区空态零占位 */
+.form-ok:empty,
+.test-result:empty {
+  padding: 0;
 }
 .test-result {
   font-size: 13px;
