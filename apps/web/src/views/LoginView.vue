@@ -75,7 +75,7 @@ async function submit(): Promise<void> {
       </button>
     </form>
 
-    <p class="hint">访问口令由部署者设置，仅保存在本机浏览器，不会上传。</p>
+    <p class="hint">访问口令由部署者设置，仅保存在本机浏览器；验证时随请求头发送，不在服务器留存。</p>
   </div>
 </template>
 

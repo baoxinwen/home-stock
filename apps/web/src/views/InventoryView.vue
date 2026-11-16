@@ -6,6 +6,7 @@ import { api } from '../api';
 import { badgeFor } from '../lib/badges';
 import { formatDateCN, todayISO } from '../lib/dates';
 import { needsExpiryDate } from '../lib/needs-expiry';
+import { formatAmount } from '../lib/stats';
 import { useInventory } from '../composables/useInventory';
 import { useMediaQuery } from '../composables/useMediaQuery';
 import ChevronIcon from '../components/ChevronIcon.vue';
@@ -44,7 +45,7 @@ const STATUS_CHIPS: ReadonlyArray<{ key: StatusFilter; label: string }> = [
   { key: 'expired', label: '已过期' },
   { key: 'opened', label: '已开封' },
   { key: 'none', label: '长期' },
-  { key: 'missing', label: '待补日期' },
+  { key: 'missing', label: '待补过期日' },
   { key: 'low', label: '低库存' },
 ];
 
@@ -476,7 +477,7 @@ onMounted(() => {
               <span class="item-name">{{ group.batches[0].name }}</span>
               <span class="inv-sub">
                 <!-- 2026-11-11 审查 I-1：名称副标改单价（总额归「价值」列，语义对齐） -->
-                {{ group.batches[0].price != null ? `¥${group.batches[0].price}${group.batches[0].unit ? ` / ${group.batches[0].unit}` : ''}` : '' }}
+                {{ group.batches[0].price != null ? `¥${formatAmount(group.batches[0].price)}${group.batches[0].unit ? ` / ${group.batches[0].unit}` : ''}` : '' }}
                 <em v-if="group.batches[0].minQuantity != null && group.batches[0].quantity <= group.batches[0].minQuantity" class="inv-low">低于最少库存</em>
               </span>
             </span>
@@ -519,11 +520,12 @@ onMounted(() => {
     <!-- 移动端：同名聚合（I-7，与桌面 displayGroups 同数据源）——
          单批次组保持原卡片形态；多批次组卡片可展开批次行，点批次开详情 -->
     <ul v-else class="item-list">
-      <template v-for="group in displayGroups" :key="group.key">
+      <!-- 评审 U-L11：stagger 用组序号（此前恒传 0，交错入场失效） -->
+      <template v-for="(group, gi) in displayGroups" :key="group.key">
         <li
           v-if="!group.isMulti"
           class="item-card enter"
-          :style="staggerStyle(0)"
+          :style="staggerStyle(gi)"
         >
           <button
             class="item-card-btn"
@@ -561,7 +563,7 @@ onMounted(() => {
             待补过期日
           </button>
         </li>
-        <li v-else class="item-card item-group enter" :style="staggerStyle(0)">
+        <li v-else class="item-card item-group enter" :style="staggerStyle(gi)">
           <button
             class="item-card-btn"
             type="button"
@@ -777,6 +779,12 @@ button.ov-card:active {
 }
 .inv-row:last-child {
   border-bottom: none;
+}
+/* 评审 U-L17：桌面行 hover 反馈对齐 ov-row 语言（此前仅 cursor 变化） */
+@media (min-width: 1024px) {
+  .inv-table .inv-row:hover {
+    background: var(--color-hover);
+  }
 }
 .inv-row.row-expiring {
   background: var(--color-row-expiring);

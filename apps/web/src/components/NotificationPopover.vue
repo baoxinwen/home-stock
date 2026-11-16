@@ -150,7 +150,7 @@ watch(
       <div class="notif-pop-head">
         <span class="notif-pop-title">
           通知
-          <span class="notif-pop-count num">未读 {{ unreadShown }}</span>
+          <span class="notif-pop-count num">未读 {{ unreadShown }} 条</span>
           <!-- 评审 A-M5：稳定 polite 区 -->
           <span class="sr-only" role="status"><template v-if="announce">{{ announce }}</template></span>
         </span>
@@ -280,7 +280,8 @@ watch(
   background: transparent;
 }
 .dot-unread {
-  background: var(--tone-red-fg);
+  /* 评审 C-L8：未读用中性强调，红色留给过期语义 */
+  background: var(--color-ink);
 }
 .row-name {
   font-weight: var(--fw-semibold);

@@ -187,7 +187,7 @@ async function submitAndAgain(): Promise<void> {
     <form class="form" @submit.prevent="submit">
       <div class="form-main">
         <section class="form-card">
-          <h3 class="card-title">基础信息</h3>
+          <h2 class="card-title">基础信息</h2>
           <label class="field">
             <span class="label">名称 *</span>
             <input v-model="form.name" type="text" required placeholder="如：鲜牛奶" />
@@ -225,7 +225,7 @@ async function submitAndAgain(): Promise<void> {
         </section>
 
         <section class="form-card">
-          <h3 class="card-title">保质期</h3>
+          <h2 class="card-title">保质期</h2>
           <fieldset class="field expiry-group">
             <legend class="label">过期方式</legend>
             <div class="mode-switch">
@@ -299,7 +299,7 @@ async function submitAndAgain(): Promise<void> {
 
       <aside class="form-side">
         <section class="form-card">
-          <h3 class="card-title">更多选项</h3>
+          <h2 class="card-title">更多选项</h2>
           <!-- 图片（0006，选填单图）：选文件/拍照即传，预览可移除；未保存移除的文件由孤儿清理兜底 -->
           <fieldset class="field image-group">
             <legend class="label">图片（选填）</legend>
@@ -570,8 +570,8 @@ select:focus {
 }
 .image-hint {
   font-size: 12px;
-  color: var(--color-text-secondary, var(--color-text));
-  opacity: 0.72;
+  /* 评审 C-L7：--color-text-secondary 不存在（恒走 fallback），改 muted 灰阶并去 opacity */
+  color: var(--color-muted);
 }
 .image-preview {
   display: flex;
@@ -588,7 +588,7 @@ select:focus {
 .image-remove {
   border: none;
   background: none;
-  color: var(--tone-red-fg, var(--color-text));
+  color: var(--tone-red-fg);
   font-size: 14px;
   cursor: pointer;
   padding: 4px;
@@ -598,7 +598,7 @@ select:focus {
   cursor: default;
 }
 .image-error {
-  color: var(--tone-red-fg, var(--color-text));
+  color: var(--tone-red-fg);
   font-size: 13px;
   margin: 8px 0 0;
 }

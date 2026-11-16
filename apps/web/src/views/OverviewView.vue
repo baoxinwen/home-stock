@@ -157,7 +157,7 @@ function daysLeftText(item: ItemDto): string {
   const left = Math.round(
     (Date.parse(`${expiry}T00:00:00Z`) - Date.parse(`${todayISO()}T00:00:00Z`)) / 86400000,
   );
-  if (item.expiryStatus === 'expired') return `过期 ${Math.max(0, -left)} 天`;
+  if (item.expiryStatus === 'expired') return `已过期 ${Math.max(0, -left)} 天`;
   if (left === 0) return '今天到期';
   return `剩 ${left} 天`;
 }

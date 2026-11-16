@@ -107,7 +107,7 @@ async function add(): Promise<void> {
   const qty = typeof quantity.value === 'number' ? quantity.value : Number(quantity.value);
   const priceNum = price.value === '' ? null : Number(price.value);
   if (priceNum !== null && (!Number.isFinite(priceNum) || priceNum < 0)) {
-    error.value = '单价必须为 >= 0 的数字';
+    error.value = '单价必须为非负数字';
     return;
   }
   const categoryNum = categoryId.value === '' ? null : Number(categoryId.value);
@@ -258,10 +258,10 @@ onMounted(async () => {
         min="1"
         step="1"
         aria-label="数量"
-        placeholder="数量"
+        placeholder="如 2"
       />
       <!-- 审查 L-1：placeholder 收短防 66px/112px 列截断（可选语义保留在 aria-label） -->
-      <input v-model="unit" class="add-unit" type="text" aria-label="单位（可选）" placeholder="单位" />
+      <input v-model="unit" class="add-unit" type="text" aria-label="单位（可选）" placeholder="如 盒" />
       <input
         v-model.number="price"
         class="add-price"
@@ -269,7 +269,7 @@ onMounted(async () => {
         min="0"
         step="0.01"
         aria-label="单价（选填，元）"
-        placeholder="单价 选填"
+        placeholder="选填"
       />
       <select v-model="categoryId" class="add-category" aria-label="类别">
         <option value="">不选类别</option>

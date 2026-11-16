@@ -16,6 +16,7 @@ import ItemAvatar from './ItemAvatar.vue';
 import { useItemRestore } from '../composables/useItemRestore';
 import { useItemDetail } from '../composables/useItemDetail';
 import { useOverlayA11y } from '../composables/useOverlayA11y';
+import { formatAmount } from '../lib/stats';
 import { imageUrl } from '../lib/images';
 
 const props = defineProps<{ itemId: number }>();
@@ -66,7 +67,7 @@ const rows = computed(() => {
     { label: '类别', value: categoryName.value },
     { label: '数量', value: `${it.quantity}${it.unit ? ` ${it.unit}` : ''}` },
     { label: '购买日期', value: formatDateCN(it.purchaseDate) },
-    { label: '价格', value: it.price === null ? '—' : `¥${it.price}` },
+    { label: '价格', value: it.price === null ? '—' : `¥${formatAmount(it.price)}` },
     { label: '过期日期', value: formatDateCN(it.effectiveExpiryDate) },
     ...(recalculated
       ? [{ label: '标注到期（开封前）', value: `${formatDateCN(it.expiryDate)} · 开封后重算` }]
@@ -264,7 +265,7 @@ async function doDelete(): Promise<void> {
         </div>
         <div class="quick-card">
           <h3 class="quick-label">数量</h3>
-          <div class="qty-stepper" aria-label="调整数量">
+          <div class="qty-stepper" role="group" aria-label="调整数量">
             <button class="step-btn" type="button" aria-label="减少数量" :disabled="stepBusy" @click="stepQuantity(-1)">−</button>
             <span class="qty-value num">{{ item.quantity }}{{ item.unit ? ` ${item.unit}` : '' }}</span>
             <button class="step-btn" type="button" aria-label="增加数量" :disabled="stepBusy" @click="stepQuantity(1)">＋</button>
@@ -587,7 +588,7 @@ async function doDelete(): Promise<void> {
   cursor: pointer;
 }
 .step-btn:active {
-  transform: scale(0.96);
+  transform: scale(0.98);
 }
 .qty-value {
   min-width: 64px;

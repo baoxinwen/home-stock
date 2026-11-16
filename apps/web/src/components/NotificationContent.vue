@@ -484,8 +484,8 @@ onMounted(() => {
   background: transparent;
 }
 .dot-unread {
-  background: var(--tone-red-fg);
-  border-color: var(--tone-red-fg);
+  /* 评审 C-L8：红色已绑定过期/危险语义，未读用中性强调 */
+  background: var(--color-ink);
 }
 /* R3 已完成行去警示色（名称/badge 恢复中性），行透明度弱化 */
 .notification-item.expired:not(.done) .notif-name {

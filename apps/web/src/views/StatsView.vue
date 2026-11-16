@@ -108,7 +108,7 @@ const lossRate = computed(() => {
   return Math.round((outAmount / inAmount) * 100);
 });
 
-/** 价值 Top 排行：在库物品按占用价值降序前 8 */
+/** 价值排行：在库物品按占用价值降序前 8 */
 const stockTopItems = computed(() => topValueItems(baseActive.value, 8));
 
 /** KPI 环比：浪费件数/金额较上月（客户端聚合口径与服务端一致：仅过期丢弃） */
@@ -270,7 +270,7 @@ onMounted(() => {
     <p class="sr-only" role="status"><template v-if="monthAnnounce">{{ monthAnnounce }}</template></p>
 
     <!-- 仪表盘模块（依赖基础数据，与月份统计解耦）：2×3 六面板
-         2026-11-11 图表扩充：浪费/入库合并双柱 + 类别价值环形 + 价值 Top 排行 -->
+         2026-11-11 图表扩充：浪费/入库合并双柱 + 类别价值环形 + 价值排行 -->
     <p v-if="baseError" class="error-text" role="alert">{{ baseError }}</p>
     <section v-else-if="!baseLoading" class="module-grid" aria-label="库存与浪费模块">
       <section class="panel enter" aria-label="入库与浪费对比">
@@ -348,7 +348,7 @@ onMounted(() => {
 
       <section class="panel enter" style="animation-delay: 240ms" aria-label="价值排行">
         <h2 class="panel-title">
-          价值 Top 排行
+          价值排行
           <span class="panel-sub-inline">占用价值前 {{ TOP_VALUE_LIMIT }} 名</span>
         </h2>
         <TopValueBars :entries="stockTopItems" />
@@ -390,7 +390,7 @@ onMounted(() => {
   background: var(--color-hover);
 }
 .month-btn:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: scale(0.98);
 }
 .month-btn:disabled {
   opacity: 0.35;

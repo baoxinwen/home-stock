@@ -848,7 +848,7 @@ onMounted(() => {
           </template>
           <template v-else>
             <span class="category-name">{{ cat.name }}</span>
-            <span class="category-count num" aria-label="占用物品数（含归档）">{{ usageOf(cat.id) }} 件</span>
+            <span class="category-count num">{{ usageOf(cat.id) }} 件<span class="sr-only">（含归档）</span></span>
             <button class="ghost-btn" type="button" @click="startRename(cat)">改名</button>
             <button class="ghost-btn danger" type="button" @click="deleteCategory(cat)">删除</button>
           </template>

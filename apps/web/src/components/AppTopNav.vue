@@ -177,8 +177,9 @@ const nav = [
   height: 16px;
   padding: 0 4px;
   border-radius: var(--radius-pill);
-  background: #c0392b;
-  color: #fff;
+  /* 评审 C-L5：回归 tone token（全站唯一硬编码红），语义与移动端徽章一致 */
+  background: var(--tone-red-fg);
+  color: var(--color-on-ink);
   font-size: 10px;
   font-weight: var(--fw-semibold);
   line-height: 16px;
