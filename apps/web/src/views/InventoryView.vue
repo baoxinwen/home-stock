@@ -577,8 +577,9 @@ onMounted(() => {
                 {{ group.name }}<em class="inv-batches">（{{ group.batches.length }} 批）</em>
               </span>
               <span class="item-meta">
-                共 {{ groupQuantity(group.batches) }}{{ group.batches[0].unit ? ` ${group.batches[0].unit}` : '' }}
-                · 最近 {{ earliestDaysText(group.batches) }}
+                <!-- 评审 L-M8/W-L17：groupQuantity 已含单位（不重复拼）、earliestDaysText 自带「最早剩」（去「最近」叠词，桌面组行同式） -->
+                共 {{ groupQuantity(group.batches) }}
+                · {{ earliestDaysText(group.batches) }}
               </span>
             </span>
             <span class="inv-group-chevron" aria-hidden="true"><ChevronIcon :rotate="isExpanded(group.name) ? 90 : 0" /></span>

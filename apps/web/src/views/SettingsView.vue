@@ -398,7 +398,7 @@ async function logout(): Promise<void> {
 
 function validate(): string {
   const days = Number(form.default_remind_days);
-  if (!Number.isInteger(days) || days <= 0) return '默认提前天数必须为正整数';
+  if (!Number.isInteger(days) || days <= 0) return '提醒阈值必须为正整数';
   const port = form.email.smtp_port;
   if (port !== '' && port !== null) {
     const p = Number(port);
@@ -460,8 +460,8 @@ async function testSend(channel: NotifyChannel): Promise<void> {
     const res = await api.notifyTest(channel);
     const r = res.results[channel];
     testResult.value = r?.ok
-      ? { channel, ok: true, text: `${channel} 渠道测试发送成功` }
-      : { channel, ok: false, text: `${channel} 渠道测试失败：${r?.error ?? '未知错误'}` };
+      ? { channel, ok: true, text: `${channelLabel(channel)}渠道测试发送成功` }
+      : { channel, ok: false, text: `${channelLabel(channel)}渠道测试失败：${r?.error ?? '未知错误'}` };
   } catch (e) {
     testResult.value = { channel, ok: false, text: `测试失败：${e instanceof Error ? e.message : String(e)}` };
   } finally {
@@ -571,7 +571,7 @@ onMounted(() => {
           </select>
         </label>
         <label class="field">
-          <span class="label">全局默认提前天数</span>
+          <span class="label">全局默认提醒阈值（天）</span>
           <input id="default-remind-days" v-model.number="form.default_remind_days" type="number" min="1" max="3650" />
         </label>
         <label class="field switch">
@@ -1625,7 +1625,8 @@ onMounted(() => {
   gap: 10px;
 }
 .panel-title {
-  font-size: 16px;
+  /* 评审 C-M6：统一面板标题字号档位 */
+  font-size: var(--text-title);
   margin: 0;
 }
 .confirm-text {

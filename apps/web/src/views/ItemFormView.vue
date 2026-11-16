@@ -681,7 +681,8 @@ select:focus {
   margin-bottom: 12px;
 }
 .panel-title {
-  font-size: 17px;
+  /* 评审 C-M6：统一面板标题字号档位（此前 16/17 漂移） */
+  font-size: var(--text-title);
   font-weight: var(--fw-semibold);
   margin: 0;
 }

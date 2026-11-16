@@ -232,7 +232,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="shopping">
+  <div class="shopping wb-page">
     <header class="page-head">
       <h1 class="page-title">购物清单</h1>
       <span class="pending-count">
@@ -387,7 +387,7 @@ onMounted(async () => {
       type="button"
       @click="clearConverted"
     >
-      {{ confirmingClear ? '确认清空已转换？' : '清空已转换' }}
+      {{ confirmingClear ? '确认清空？已转库存的记录将被删除，不可恢复' : '清空已转换' }}
     </button>
   </div>
 </template>

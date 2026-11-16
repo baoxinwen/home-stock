@@ -363,7 +363,8 @@ onMounted(load);
   color: var(--color-muted);
 }
 .kpi-value {
-  font-size: 26px;
+  /* 评审 C-M6：统一 KPI 字号档位 */
+  font-size: var(--text-kpi);
   line-height: 1.15;
   font-weight: var(--fw-semibold);
   color: var(--color-ink);

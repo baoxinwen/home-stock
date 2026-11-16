@@ -1,6 +1,6 @@
 /**
  * 通知中心测试（三态收件箱，对标 GitHub inbox unread→read→done）：
- * 收件箱/未读/已完成 chips、分组（今天/更早）、行内完成✓/已用完/恢复、
+ * 收件箱/未读/已完成 chips、分组（今天/更早）、行内完成✓/用完/恢复、
  * 点行自动已读（A3）、全部完成（B3）、双空态（B2）、相对时间（B1）、
  * 首字头像（R1）、主操作分级（R2）、已完成去警示（R3）、发送日志折叠。
  */
@@ -256,7 +256,7 @@ describe('NotifCenterView 收件箱三态', () => {
     expect(api.listNotifications).toHaveBeenCalledWith(true);
   });
 
-  it('I-6 行内快捷归档按通知类型分流：临期→已用完（used_up）；过期→已过期丢弃（expired_discarded 计浪费）', async () => {
+  it('I-6 行内快捷归档按通知类型分流：临期→用完（used_up）；过期→过期丢弃（expired_discarded 计浪费）', async () => {
     vi.mocked(api.listNotifications).mockResolvedValue([
       notif({ id: 1, itemId: 11, sentDate: today, read: 0 }), // 临期 → used_up
       notif({ id: 2, itemId: 12, type: 'expired', itemName: '感冒灵颗粒', sentDate: today, read: 0 }), // 过期 → expired_discarded
@@ -268,14 +268,14 @@ describe('NotifCenterView 收件箱三态', () => {
     const { wrapper } = await mountView();
     const rows = wrapper.findAll('.notification-item');
 
-    const usedUp = rows[0].findAll('.notif-action').find((b) => b.text() === '已用完')!;
+    const usedUp = rows[0].findAll('.notif-action').find((b) => b.text() === '用完')!;
     await usedUp.trigger('click');
     await flushPromises();
     expect(api.archiveItem).toHaveBeenCalledWith(11, { reason: 'used_up' });
     expect(api.markNotificationsDone).toHaveBeenCalledWith([1]);
 
-    const discard = rows[1].findAll('.notif-action').find((b) => b.text() === '已过期丢弃')!;
-    expect(discard).toBeDefined(); // 过期通知不再误显「已用完」
+    const discard = rows[1].findAll('.notif-action').find((b) => b.text() === '过期丢弃')!;
+    expect(discard).toBeDefined(); // 过期通知不再误显「用完」
     await discard.trigger('click');
     await flushPromises();
     expect(api.archiveItem).toHaveBeenCalledWith(12, { reason: 'expired_discarded' });

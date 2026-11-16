@@ -7,7 +7,7 @@
  * - main.ts 挂载前调 initTheme() 一次性应用，避免首帧闪烁；
  *   设置页用 useTheme() 做运行时切换。
  */
-import { computed, onScopeDispose, ref, watchEffect } from 'vue';
+import { computed, onScopeDispose, ref, watch, watchEffect } from 'vue';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 export type ResolvedTheme = 'light' | 'dark';
@@ -83,6 +83,20 @@ export function useTheme() {
 
   watchEffect(() => {
     document.documentElement.dataset.theme = resolved.value;
+  });
+
+  // 评审 C-M1：主题翻转时抑制全站过渡——main.css 的 200ms 颜色过渡 + 各组件分散的
+  // 150ms 过渡同时开火，整页几十个表面逐一变色出现明显涂抹。注入一次性全量
+  // transition:none → 强制 reflow → 双 rAF 后移除，一处实现全站生效
+  watch(resolved, () => {
+    if (typeof document === 'undefined') return;
+    const style = document.createElement('style');
+    style.textContent = '*,*::before,*::after{transition:none!important}';
+    document.head.appendChild(style);
+    void document.body.offsetHeight;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => style.remove());
+    });
   });
 
   function setPreference(pref: ThemePreference): void {

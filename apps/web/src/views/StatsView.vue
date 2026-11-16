@@ -430,7 +430,8 @@ onMounted(() => {
   color: var(--color-muted);
 }
 .kpi-value {
-  font-size: 28px;
+  /* 评审 C-M6：统一 KPI 字号档位（此前 26/28 跨页漂移） */
+  font-size: var(--text-kpi);
   line-height: 1.1;
   font-weight: var(--fw-semibold);
   color: var(--color-ink);

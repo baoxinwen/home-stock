@@ -317,7 +317,7 @@ onMounted(() => {
                 : '归档物品（可从归档页恢复）并完成这条通知'"
               @click="quickArchive(n)"
             >
-              {{ n.type === 'expired' ? '已过期丢弃' : '已用完' }}
+              {{ n.type === 'expired' ? '过期丢弃' : '用完' }}
             </button>
             <!-- R2 主操作 ink 实色 pill -->
             <button class="notif-action primary" type="button" @click="complete(n)">完成 ✓</button>
