@@ -7,7 +7,7 @@
  * 挂载即拉数据（轻量一次并行请求）；外部点击/Esc/路由变化关闭；未读变化刷新导航徽章单例。
  * 定位：absolute 挂在顶栏铃铛容器内（.topnav-bell-wrap），随铃铛右对齐。
  */
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import type { ItemDto, NotificationDto } from '@home-stock/shared';
 import { api } from '../api';
@@ -104,6 +104,9 @@ async function markAll(): Promise<void> {
     rows.value = [];
     refreshNavBadges();
     announce.value = '已全部完成，收件箱已清空';
+    // 评审 A-M2 余量：触发按钮随列表清空卸载，焦点落到面板本体（保持上下文）
+    await nextTick();
+    panelEl.value?.focus();
   } catch (e) {
     error.value = e instanceof Error ? e.message : '操作失败';
   } finally {
@@ -146,7 +149,7 @@ watch(
 
 <template>
   <Transition name="pop">
-    <div ref="panelEl" class="notif-pop" role="dialog" aria-label="通知面板">
+    <div ref="panelEl" class="notif-pop" role="dialog" aria-label="通知面板" tabindex="-1">
       <div class="notif-pop-head">
         <span class="notif-pop-title">
           通知
@@ -209,6 +212,11 @@ watch(
     0 0 0 1px var(--color-line),
     0 16px 40px rgba(0, 0, 0, 0.14);
   overflow: hidden;
+}
+/* 评审 A-M2 余量：全部完成后程序焦点落面板（tabindex=-1 容器不显示焦点环） */
+.notif-pop:focus,
+.notif-pop:focus-visible {
+  outline: none;
 }
 .notif-pop-head {
   display: flex;

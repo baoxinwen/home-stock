@@ -23,6 +23,7 @@ function redirectTarget(): string {
 }
 
 async function submit(): Promise<void> {
+  if (submitting.value) return; // 评审 A-L3：忙态保留可聚焦后靠守卫拦重复提交
   const value = token.value.trim();
   if (!value) {
     error.value = '请输入访问口令';
@@ -70,7 +71,8 @@ async function submit(): Promise<void> {
 
       <p v-if="error" class="form-error" role="alert">{{ error }}</p>
 
-      <button class="primary-btn" type="submit" :disabled="submitting">
+      <!-- 评审 A-L3：忙态改 aria-disabled（native disabled 使点击即丢焦点到 body） -->
+      <button class="primary-btn" type="submit" :aria-disabled="submitting ? 'true' : undefined">
         {{ submitting ? '验证中…' : '进入' }}
       </button>
     </form>
@@ -140,7 +142,8 @@ async function submit(): Promise<void> {
   font-weight: var(--fw-semibold);
   cursor: pointer;
 }
-.primary-btn:disabled {
+.primary-btn:disabled,
+.primary-btn[aria-disabled='true'] {
   opacity: 0.6;
   cursor: default;
 }

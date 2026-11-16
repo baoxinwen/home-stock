@@ -91,7 +91,8 @@ describe('SettingsView', () => {
     expect(wrapper.find('.form-error').text()).toContain('网络错误');
     // 类别管理卡也有自己的 submit 按钮，限定主设置表单内
     const saveBtn = wrapper.find('form.settings-form button[type="submit"]');
-    expect(saveBtn.attributes('disabled')).toBeDefined();
+    // 评审 A-L3：忙态/失败态改 aria-disabled（保留可聚焦），loadFailed 由 save 首行守卫拦截
+    expect(saveBtn.attributes('aria-disabled')).toBe('true');
     await wrapper.find('form.settings-form').trigger('submit');
     await flushPromises();
     expect(api.updateSettings).not.toHaveBeenCalled();

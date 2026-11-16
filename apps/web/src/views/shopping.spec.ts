@@ -548,9 +548,10 @@ describe('W-M3 添加按钮 in-flight 守卫', () => {
     await form.trigger('submit'); // 第一次提交挂起
     await flushPromises();
     const submit = wrapper.find('.add-submit');
-    expect(submit.attributes('disabled')).toBeDefined(); // in-flight 禁用
+    // 评审 A-L3：in-flight 改 aria-disabled（保留可聚焦），重复提交由 adding 守卫拦截
+    expect(submit.attributes('aria-disabled')).toBe('true');
 
-    await form.trigger('submit'); // disabled 期间再提交
+    await form.trigger('submit'); // 挂起中再提交
     await flushPromises();
     expect(api.createShoppingItem).toHaveBeenCalledTimes(1); // RED：现状 2 次
 

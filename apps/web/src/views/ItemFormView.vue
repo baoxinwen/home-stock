@@ -132,6 +132,7 @@ async function failValidation(built: Extract<ReturnType<typeof toPayload>, { ok:
 }
 
 async function submit(): Promise<void> {
+  if (saving.value) return; // 评审 A-L3：忙态保留可聚焦后靠守卫拦重复提交
   const built = toPayload();
   if (!built.ok) {
     await failValidation(built);
@@ -163,6 +164,7 @@ useOverlayA11y({ panel: historyPanelEl, close: closeHistory, open: historyOpen }
 const againNotice = ref('');
 
 async function submitAndAgain(): Promise<void> {
+  if (saving.value) return;
   const built = toPayload();
   if (!built.ok) {
     await failValidation(built);
@@ -330,11 +332,12 @@ async function submitAndAgain(): Promise<void> {
 
         <!-- 审查 F-1：主/次保存按钮并排（原全宽黑条 + 半宽灰条主次失衡） -->
         <div class="form-actions">
-          <button class="btn-primary" type="submit" :disabled="saving">
+          <!-- 评审 A-L3：忙态改 aria-disabled 保留可聚焦（守卫在 handler 首行） -->
+          <button class="btn-primary" type="submit" :aria-disabled="saving ? 'true' : undefined">
             {{ saving ? '保存中…' : '保存' }}
           </button>
           <!-- D-12：新建态连续录入（规格 §2.2 逐件录入场景），编辑/转库存态不出现（一次转换语义） -->
-          <button v-if="editId === null && convertId === null" class="btn-secondary again-btn" type="button" :disabled="saving" @click="submitAndAgain">
+          <button v-if="editId === null && convertId === null" class="btn-secondary again-btn" type="button" :aria-disabled="saving ? 'true' : undefined" @click="submitAndAgain">
             保存并再记一笔
           </button>
         </div>
@@ -692,7 +695,8 @@ select:focus {
 .btn-primary:active {
   transform: scale(0.98);
 }
-.btn-primary:disabled {
+.btn-primary:disabled,
+.form-actions button[aria-disabled='true'] {
   opacity: 0.6;
   cursor: default;
 }

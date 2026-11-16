@@ -166,8 +166,29 @@ async function run(action: () => Promise<unknown>, success = ''): Promise<boolea
 }
 
 function toggle(item: ShoppingItemDto): void {
-  const status = item.status === 'pending' ? 'done' : 'pending';
-  void run(() => api.updateShoppingItem(item.id, { status }));
+  const toDone = item.status === 'pending';
+  const idx = pendingItems.value.indexOf(item);
+  const status = toDone ? 'done' : 'pending';
+  void run(() => api.updateShoppingItem(item.id, { status })).then(async (ok) => {
+    if (!ok) return;
+    // 评审 A-M2 余量：勾选后行移入默认折叠的已完成区（DOM 虽在但不可见），
+    // 焦点落相邻待购行勾选钮，待购清空则落「已完成」折叠头；改回待购则落本行勾选钮
+    await nextTick();
+    if (toDone) {
+      const toggles = document.querySelectorAll<HTMLElement>('.pending-section .toggle');
+      const target = toggles[Math.min(Math.max(idx, 0), toggles.length - 1)];
+      if (target) {
+        target.focus();
+      } else {
+        document.querySelector<HTMLElement>('.done-head .section-toggle')?.focus();
+      }
+    } else {
+      const row = [...document.querySelectorAll('.pending-section .shopping-item')].find(
+        (el) => el.querySelector('.item-name')?.textContent === item.name,
+      );
+      row?.querySelector<HTMLElement>('.toggle')?.focus();
+    }
+  });
 }
 
 /** M5.1 修改数量：失焦/回车提交，非法值回落原数量；提交失败把输入框回弹为当前值（M16） */
@@ -198,6 +219,7 @@ const batchConverting = ref(false);
 
 async function convertAllDone(): Promise<void> {
   if (doneItems.value.length === 0) return;
+  if (batchConverting.value) return; // 评审 A-L3：忙态保留可聚焦后靠守卫拦重复提交
   batchConverting.value = true;
   error.value = '';
   notice.value = '';
@@ -294,7 +316,8 @@ onMounted(async () => {
         <option value="">不选类别</option>
         <option v-for="c in categories" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
       </select>
-      <button class="add-submit" type="submit" :disabled="adding">添加</button>
+      <!-- 评审 A-L3：忙态改 aria-disabled 保留可聚焦（守卫在 handler 首行） -->
+      <button class="add-submit" type="submit" :aria-disabled="adding ? 'true' : undefined">添加</button>
     </form>
 
     <p id="shopping-error" v-if="error" class="error-text" role="alert">{{ error }}</p>
@@ -366,7 +389,7 @@ onMounted(async () => {
           已完成（{{ doneItems.length }}）<ChevronIcon :rotate="doneCollapsed ? 0 : 90" />
         </button>
         <!-- D-4：批量转入库存，免去逐件点击 -->
-        <button class="convert convert-all" type="button" :disabled="batchConverting" @click="convertAllDone">
+        <button class="convert convert-all" type="button" :aria-disabled="batchConverting ? 'true' : undefined" @click="convertAllDone">
           {{ batchConverting ? '转库存中…' : '全部转为库存' }}
         </button>
       </div>
@@ -758,7 +781,9 @@ onMounted(async () => {
   font-size: 13px;
   cursor: pointer;
 }
-.convert-all:disabled {
+.convert-all:disabled,
+.convert-all[aria-disabled='true'],
+.add-submit[aria-disabled='true'] {
   opacity: 0.6;
   cursor: default;
 }

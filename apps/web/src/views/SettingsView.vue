@@ -86,6 +86,7 @@ function onRestoreFileChange(e: Event): void {
 
 /** I-7 移植：blob + header 认证下载（口令不再进 URL），失败行内提示 */
 async function downloadBackupAction(): Promise<void> {
+  if (downloading.value) return; // 评审 A-L3：忙态保留可聚焦后靠守卫拦重复提交
   backupError.value = '';
   downloading.value = true;
   try {
@@ -354,6 +355,7 @@ useOverlayA11y({
 });
 
 async function restore(): Promise<void> {
+  if (restoring.value) return; // 评审 A-L3：忙态保留可聚焦后靠守卫拦重复提交
   backupError.value = '';
   backupOk.value = '';
   const file = restoreFile.value?.files?.[0] ?? null;
@@ -444,6 +446,8 @@ function buildPayload() {
 }
 
 async function save(): Promise<void> {
+  // 评审 A-L3：忙态保留可聚焦后靠守卫拦重复提交
+  if (saving.value || loading.value) return;
   // 加载失败时表单是默认值，保存会把 reminder_hour 重置 8、渠道清空（I-3 移植）→ 直接拒绝
   if (loadFailed.value) {
     formError.value = '设置加载失败，请刷新页面重试后再保存';
@@ -470,6 +474,7 @@ async function save(): Promise<void> {
 }
 
 async function testSend(channel: NotifyChannel): Promise<void> {
+  if (testing.value) return; // 评审 A-L3：忙态保留可聚焦后靠守卫拦重复提交
   testing.value = channel;
   testResult.value = null;
   try {
@@ -672,7 +677,8 @@ onMounted(() => {
                 <span class="label">收件人</span>
                 <input id="email-to" v-model="form.email.to" type="text" />
               </label>
-              <button class="ghost-btn" type="button" data-channel="email" :disabled="testing === 'email'" @click="testSend('email')">
+              <!-- 评审 A-L3：忙态改 aria-disabled 保留可聚焦（守卫在 handler 首行） -->
+              <button class="ghost-btn" type="button" data-channel="email" :aria-disabled="testing === 'email' ? 'true' : undefined" @click="testSend('email')">
                 发送测试邮件
               </button>
               <!-- 评审 A-L6：testResult 改稳定区（常驻渲染，空态零占位） -->
@@ -725,7 +731,7 @@ onMounted(() => {
                 <span class="label">接收人</span>
                 <input id="wecom-to-user" v-model="form.wecom.to_user" type="text" placeholder="@all" />
               </label>
-              <button class="ghost-btn" type="button" data-channel="wecom" :disabled="testing === 'wecom'" @click="testSend('wecom')">
+              <button class="ghost-btn" type="button" data-channel="wecom" :aria-disabled="testing === 'wecom' ? 'true' : undefined" @click="testSend('wecom')">
                 发送测试消息
               </button>
               <p
@@ -778,7 +784,7 @@ onMounted(() => {
             <button
               class="ghost-btn backup-download"
               type="button"
-              :disabled="downloading"
+              :aria-disabled="downloading ? 'true' : undefined"
               @click="downloadBackupAction"
             >
               {{ downloading ? '下载中…' : '备份下载' }}
@@ -806,7 +812,7 @@ onMounted(() => {
               </label>
               <span v-if="restoreFileName" class="file-picked num">{{ restoreFileName }}</span>
             </div>
-            <button class="ghost-btn danger restore-btn" type="button" :disabled="restoring" @click="restore">
+            <button class="ghost-btn danger restore-btn" type="button" :aria-disabled="restoring ? 'true' : undefined" @click="restore">
               {{ restoring ? '恢复中…' : '上传恢复' }}
             </button>
           </div>
@@ -841,8 +847,14 @@ onMounted(() => {
         </div>
       </section>
 
-      <!-- 保存只作用于提醒/邮件/企微字段；外观/类别/备份无需保存，不显示按钮 -->
-      <button v-show="showSave" class="primary-btn" type="submit" :disabled="saving || loading || loadFailed">
+      <!-- 保存只作用于提醒/邮件/企微字段；外观/类别/备份无需保存，不显示按钮。
+           评审 A-L3：忙态改 aria-disabled 保留可聚焦（守卫在 save 首行） -->
+      <button
+        v-show="showSave"
+        class="primary-btn"
+        type="submit"
+        :aria-disabled="saving || loading || loadFailed ? 'true' : undefined"
+      >
         {{ saving ? '保存中…' : '保存设置' }}
       </button>
     </form>
@@ -1043,6 +1055,12 @@ onMounted(() => {
 }
 .primary-btn:active {
   transform: scale(0.98);
+}
+/* 评审 A-L3：忙态（aria-disabled）视觉对齐原 disabled 态 */
+.primary-btn[aria-disabled='true'],
+.ghost-btn[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: default;
 }
 @media (max-width: 767px) {
   .primary-btn {

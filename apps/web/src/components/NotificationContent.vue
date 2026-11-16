@@ -6,7 +6,7 @@
  * - 物品点击通过 open-item 事件上抛——页面壳桌面开抽屉/移动跳页，抽屉叠开物品抽屉
  * - 发送日志折叠（铁律 7 Grid）
  */
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import type { NotificationDto } from '@home-stock/shared';
 import { api } from '../api';
 import { relativeDate, todayISO } from '../lib/dates';
@@ -29,6 +29,25 @@ const filter = ref<InboxFilter>('inbox');
 const completing = ref(false);
 /** 评审 A-M5：行内操作结果经稳定 polite 区播报（行悄悄消失时 SR 用户需要确认） */
 const actionNotice = ref('');
+
+/** 评审 A-M2 余量：行内操作后该行移出当前视图，焦点还原到同位置的相邻行
+ *  主体按钮；列表空（或相邻行不可聚焦）回落到工具行首个 chip */
+async function refocusAfterRowChange(removed: NotificationDto, viewBefore: NotificationDto[]): Promise<void> {
+  const idx = viewBefore.indexOf(removed);
+  await nextTick();
+  const mains = document.querySelectorAll<HTMLButtonElement>('.notif-list .notif-main');
+  const atPosition = mains[Math.min(Math.max(idx, 0), mains.length - 1)];
+  if (atPosition && !atPosition.disabled) {
+    atPosition.focus();
+    return;
+  }
+  const fallback = [...mains].find((b) => !b.disabled);
+  if (fallback) {
+    fallback.focus();
+    return;
+  }
+  document.querySelector<HTMLElement>('.toolbar .chip')?.focus();
+}
 
 const today = todayISO();
 const unread = computed(() => notifications.value.filter((n) => !n.read).length);
@@ -141,12 +160,14 @@ function openItem(n: NotificationDto): void {
 
 /** 完成 ✓：done=1（server 同时置已读）→ 移出收件箱 */
 async function complete(n: NotificationDto): Promise<void> {
+  const viewBefore = [...inbox.value];
   try {
     await api.markNotificationsDone([n.id]);
     n.done = 1;
     n.read = 1;
     emit('read-changed');
     actionNotice.value = `已完成「${nameOf(n)}」的提醒`;
+    await refocusAfterRowChange(n, viewBefore);
   } catch (e) {
     error.value = e instanceof Error ? e.message : '操作失败';
   }
@@ -154,11 +175,13 @@ async function complete(n: NotificationDto): Promise<void> {
 
 /** 已完成 → 恢复到收件箱（仅清 done） */
 async function restore(n: NotificationDto): Promise<void> {
+  const viewBefore = [...doneList.value];
   try {
     await api.undoNotificationsDone([n.id]);
     n.done = 0;
     emit('read-changed');
     actionNotice.value = `已把「${nameOf(n)}」恢复到收件箱`;
+    await refocusAfterRowChange(n, viewBefore);
   } catch (e) {
     error.value = e instanceof Error ? e.message : '操作失败';
   }
@@ -172,6 +195,7 @@ const quickArchiveBusy = ref(false);
 async function quickArchive(n: NotificationDto): Promise<void> {
   if (!canOpen(n) || quickArchiveBusy.value) return;
   quickArchiveBusy.value = true;
+  const viewBefore = [...inbox.value];
   try {
     const reason = n.type === 'expired' ? 'expired_discarded' : 'used_up';
     await api.archiveItem(n.itemId as number, { reason });
@@ -181,6 +205,7 @@ async function quickArchive(n: NotificationDto): Promise<void> {
     nameById.value.delete(n.itemId as number);
     emit('read-changed');
     actionNotice.value = `已归档「${nameOf(n)}」并完成提醒`;
+    await refocusAfterRowChange(n, viewBefore);
   } catch (e) {
     error.value = e instanceof Error ? e.message : '操作失败';
   } finally {
