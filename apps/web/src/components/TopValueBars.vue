@@ -88,6 +88,12 @@ function quantityText(e: TopValueEntry): string {
   outline-offset: -1px;
   transition: width 400ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+/* 评审 A-H4：条宽动画尊重系统减弱动态 */
+@media (prefers-reduced-motion: reduce) {
+  .tv-fill {
+    transition: none;
+  }
+}
 .num {
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum';

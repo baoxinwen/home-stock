@@ -994,8 +994,9 @@ button.ov-card:active {
   gap: 6px;
 }
 .qty-step-btn {
-  width: 22px;
-  height: 22px;
+  /* 评审 A-L4：对齐项目标准 --control-h（28px ≥ 2.5.8 达标线），原 22px 低于 24px 基线 */
+  width: var(--control-h);
+  height: var(--control-h);
   border: none;
   background: var(--color-hover);
   border-radius: var(--radius-s);

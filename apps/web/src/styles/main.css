@@ -132,6 +132,8 @@ html {
      注：本环境 Chromium 对 html 的 scrollbar-gutter: stable 未按预期预留槽位，
      故用 overflow-y: scroll 硬保证（滚动条不可滚时只显示空轨道）。 */
   overflow-y: scroll;
+  /* 评审 L-19：键盘走查时焦点行不再滚到 sticky 顶栏（~57/59px）底下 */
+  scroll-padding-block-start: 64px;
 }
 
 html,
@@ -143,7 +145,8 @@ body {
   font-family: 'SF Pro Display', -apple-system, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei',
     sans-serif;
   line-height: 1.6;
-  font-size: 15px;
+  /* 评审 T-L4：rem 表达保留浏览器字号偏好（0.9375rem = 15px，布局不变） */
+  font-size: 0.9375rem;
   font-weight: var(--fw-normal);
   -webkit-font-smoothing: antialiased;
   transition: background-color 200ms ease, color 200ms ease;
@@ -166,6 +169,15 @@ textarea {
   border-radius: 8px;
   color: var(--color-text);
   font: inherit;
+}
+
+/* 评审 C-M5：iOS Safari 对 <16px 输入聚焦即整页缩放且不回弹——移动端抬到 16px，桌面保持密度 */
+@media (max-width: 767px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 /* 铁律 2 聚焦：不加 outline，双环 box-shadow 造咬合感 */
@@ -365,7 +377,8 @@ h3 {
 }
 .tab-item.router-link-active {
   color: var(--color-ink);
-  font-weight: 600;
+  /* 评审 C-M4：跟随字重变量走暗色 -40 补偿（铁律 3），此前硬编码 600 绕过了补偿 */
+  font-weight: var(--fw-semibold);
 }
 /* 2026-11-13 细节轮 E3（M-9）：icon+label 双行，徽章挂图标右上角 */
 .tab-icon {

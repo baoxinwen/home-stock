@@ -128,18 +128,31 @@ function isNow(month: string): boolean {
   min-height: 2px;
   transition: height 400ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+/* 评审 C-M2：亮色 bar-* × surface 1.45–1.80:1 不达图形对象 3:1，fg 色描边补救（同 WasteTrendChart） */
 .bar-in {
   background: var(--bar-blue);
+  outline: 1px solid var(--tone-blue-fg);
+  outline-offset: -1px;
 }
 .bar-out {
   background: var(--bar-red);
+  outline: 1px solid var(--tone-red-fg);
+  outline-offset: -1px;
 }
-/* 当前月：对应 fg 色实心强调（不用 ink，审查 G-1） */
+/* 当前月：对应 fg 色实心强调（不用 ink，审查 G-1）；实心自足，撤描边 */
 .bar-in-now {
   background: var(--tone-blue-fg);
+  outline: none;
 }
 .bar-out-now {
   background: var(--tone-red-fg);
+  outline: none;
+}
+/* 评审 A-H4：柱高动画尊重系统减弱动态 */
+@media (prefers-reduced-motion: reduce) {
+  .inout-bar {
+    transition: none;
+  }
 }
 .inout-lbl {
   font-size: 11px;

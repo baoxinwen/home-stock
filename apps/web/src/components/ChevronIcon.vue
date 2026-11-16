@@ -33,6 +33,11 @@ const cls = CLS[props.rotate ?? 0];
   vertical-align: -0.125em; /* 铁律 5 */
   transition: transform 200ms ease;
 }
+/* 评审 U-L15：viewBox 24 的 stroke 2 在 12–14px 渲染时只剩 ~1px，比并排 semibold 文字还轻——
+   锁定屏幕渲染宽度，不随图标缩小 */
+.chev-icon path {
+  vector-effect: non-scaling-stroke;
+}
 .chev-90 {
   transform: rotate(90deg);
 }

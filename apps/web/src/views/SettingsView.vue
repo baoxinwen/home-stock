@@ -1305,7 +1305,9 @@ onMounted(() => {
   min-height: 0;
 }
 @media (prefers-reduced-motion: reduce) {
-  .logs-collapse {
+  .logs-collapse,
+  /* 评审 A-H4：渠道配置折叠与 logs-collapse 同款 Grid 运动，一并守卫 */
+  .channel-collapse {
     transition: none;
   }
 }

@@ -603,10 +603,18 @@ onMounted(() => {
   border-radius: 3px; /* 子元素微圆角，保持紧凑 */;
   transition: width 400ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.fill-blue { background: var(--bar-blue); }
-.fill-green { background: var(--bar-green); }
-.fill-yellow { background: var(--bar-yellow); }
-.fill-red { background: var(--bar-red); }
+/* 评审 C-M2：亮色 bar-* × surface 仅 1.45–1.80:1（WCAG 1.4.11 图形对象需 3:1），
+   对齐 WasteTrendChart/TopValueBars 既有补救语言——fg 色描边 */
+.fill-blue { background: var(--bar-blue); outline: 1px solid var(--tone-blue-fg); outline-offset: -1px; }
+.fill-green { background: var(--bar-green); outline: 1px solid var(--tone-green-fg); outline-offset: -1px; }
+.fill-yellow { background: var(--bar-yellow); outline: 1px solid var(--tone-yellow-fg); outline-offset: -1px; }
+.fill-red { background: var(--bar-red); outline: 1px solid var(--tone-red-fg); outline-offset: -1px; }
+/* 评审 A-H4：宽度重排动画尊重系统减弱动态 */
+@media (prefers-reduced-motion: reduce) {
+  .bar-fill {
+    transition: none;
+  }
+}
 .badge {
   font-size: 12px;
   padding: 3px 9px;

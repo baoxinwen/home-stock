@@ -82,6 +82,12 @@ const ariaLabel = computed(() => {
   background: var(--tone-blue-fg);
   outline: none;
 }
+/* 评审 A-H4：柱高动画尊重系统减弱动态 */
+@media (prefers-reduced-motion: reduce) {
+  .trend-bar {
+    transition: none;
+  }
+}
 .trend-lbl {
   font-size: 11px;
   color: var(--color-muted);

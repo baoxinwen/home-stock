@@ -704,6 +704,10 @@ onMounted(async () => {
   .shopping-item.done .toggle {
     animation: none;
   }
+  /* 评审 A-H4：Grid 折叠属布局运动，减弱动态时直接切换 */
+  .collapse {
+    transition: none;
+  }
 }
 </style>
 <style scoped>
