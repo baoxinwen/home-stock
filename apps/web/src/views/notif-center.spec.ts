@@ -373,27 +373,10 @@ describe('NotifCenterView 收件箱三态', () => {
     expect(w2.wrapper.find('.inbox-clear').text()).toBe('收件箱已清空');
     expect(w2.wrapper.find('.unread-count').exists()).toBe(false);
   });
-});
 
-describe('NotifCenterView 发送日志', () => {
-  it('默认折叠（Grid 0fr，内容常驻），展开后渲染渠道与消息', async () => {
-    vi.mocked(api.listNotificationLogs).mockResolvedValue([
-      { id: 1, channel: 'email', level: 'error', message: 'SMTP 连接失败', createdAt: '2026-11-07T08:00:00.000Z' },
-      { id: 2, channel: 'inapp', level: 'info', message: '已送达 4 条提醒', createdAt: '2026-11-07T08:00:05.000Z' },
-    ]);
+  it('发送日志已移除：工具行不再有展开入口（2026-11-16 用户决策：排障信息不进用户界面）', async () => {
     const { wrapper } = await mountView();
-    const collapse = wrapper.find('.logs-collapse');
-    expect(collapse.exists()).toBe(true);
-    expect(collapse.classes()).not.toContain('open');
-
-    await wrapper.find('.btn-ghost').trigger('click');
-    expect(wrapper.find('.logs-collapse').classes()).toContain('open');
-    const panel = wrapper.find('.logs-panel');
-    expect(panel.exists()).toBe(true);
-    const rows = panel.findAll('.log-row');
-    expect(rows).toHaveLength(2);
-    expect(rows[0].text()).toContain('邮件');
-    expect(rows[0].text()).toContain('SMTP 连接失败');
-    expect(rows[1].text()).toContain('应用内');
+    expect(wrapper.find('.btn-ghost').exists()).toBe(false);
+    expect(wrapper.find('.logs-collapse').exists()).toBe(false);
   });
 });

@@ -9,7 +9,6 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import type { NotificationDto } from '@home-stock/shared';
 import { api } from '../api';
-import ChevronIcon from './ChevronIcon.vue';
 import { relativeDate, todayISO } from '../lib/dates';
 
 type InboxFilter = 'inbox' | 'unread' | 'done';
@@ -23,12 +22,10 @@ const emit = defineEmits<{
 }>();
 
 const notifications = ref<NotificationDto[]>([]);
-const logs = ref<{ id: number; channel: string | null; level?: string | null; message: string | null; createdAt: string | null }[]>([]);
 const nameById = ref(new Map<number, string>());
 const loading = ref(true);
 const error = ref('');
 const filter = ref<InboxFilter>('inbox');
-const logsOpen = ref(false);
 const completing = ref(false);
 
 const today = todayISO();
@@ -105,14 +102,12 @@ async function load(): Promise<void> {
   loading.value = true;
   error.value = '';
   try {
-    const [list, active, archived, logList] = await Promise.all([
+    const [list, active, archived] = await Promise.all([
       api.listNotifications(),
       api.listItems(),
       api.listItems({ status: 'archived' }),
-      api.listNotificationLogs(),
     ]);
     notifications.value = list;
-    logs.value = logList;
     const map = new Map<number, string>();
     for (const it of [...active, ...archived]) map.set(it.id, it.name);
     nameById.value = map;
@@ -206,13 +201,6 @@ function setFilter(f: InboxFilter): void {
   filter.value = f;
 }
 
-function channelLabel(channel: string | null): string {
-  if (channel === 'email') return '邮件';
-  if (channel === 'wecom') return '企业微信';
-  if (channel === 'inapp') return '应用内';
-  return channel ?? '未知';
-}
-
 onMounted(() => {
   void load();
 });
@@ -242,9 +230,6 @@ onMounted(() => {
           @click="completeAll"
         >
           全部完成
-        </button>
-        <button class="btn-ghost" type="button" :aria-expanded="logsOpen" @click="logsOpen = !logsOpen">
-          发送日志 <ChevronIcon :rotate="logsOpen ? 90 : 0" />
         </button>
       </div>
     </div>
@@ -314,26 +299,6 @@ onMounted(() => {
           <button v-else class="notif-action" type="button" @click="restore(n)">恢复</button>
         </li>
       </ul>
-    </section>
-
-    <!-- 铁律 7 丝滑折叠：Grid 0fr→1fr 过渡，免 JS 算高。
-         内层 .logs-collapse-inner 负责裁剪：折叠元素的 padding 不能放在被裁剪元素自身 -->
-    <section class="logs-collapse" :class="{ open: logsOpen }" aria-label="发送日志">
-      <div class="logs-collapse-inner">
-        <div class="logs-panel">
-          <h2 class="group-title">发送日志</h2>
-          <p v-if="logs.length === 0" class="muted-text">暂无发送记录</p>
-          <ul v-else class="logs-list">
-            <li v-for="log in logs" :key="log.id" class="log-row">
-              <span class="badge" :class="log.level === 'error' ? 'tone-red' : 'tone-gray'">
-                {{ channelLabel(log.channel) }}
-              </span>
-              <span class="log-message">{{ log.message }}</span>
-              <span class="log-time num">{{ log.createdAt?.replace('T', ' ').slice(0, 16) }}</span>
-            </li>
-          </ul>
-        </div>
-      </div>
     </section>
   </div>
 </template>
@@ -591,39 +556,6 @@ onMounted(() => {
   color: var(--color-muted);
   margin: 0;
 }
-.logs-collapse-inner .logs-panel {
-  margin-top: 20px;
-  background: var(--color-surface);
-  border-radius: var(--radius-l);
-  padding: 14px 16px;
-}
-.logs-collapse-inner .logs-panel .group-title {
-  margin-bottom: 10px;
-}
-.logs-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 8px;
-}
-.log-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 12px;
-  color: var(--color-muted);
-}
-.log-message {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.log-time {
-  flex: none;
-}
 .muted-text {
   color: var(--color-muted);
   font-size: 14px;
@@ -637,23 +569,5 @@ onMounted(() => {
   color: var(--tone-red-fg);
   font-size: 14px;
   padding: 12px 0;
-}
-</style>
-
-<style scoped>
-/* 铁律 7 丝滑折叠：Grid 0fr→1fr，免 JS 算高。
-   裁剪层独立于带 padding 的面板：0fr 时面板整体（含 padding/圆角）被完全收起 */
-.logs-collapse {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 260ms cubic-bezier(0.215, 0.61, 0.355, 1);
-}
-.logs-collapse > .logs-collapse-inner {
-  overflow: hidden;
-  min-height: 0;
-}
-.logs-collapse.open {
-  grid-template-rows: 1fr;
-  margin-top: 20px;
 }
 </style>

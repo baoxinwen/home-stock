@@ -11,11 +11,24 @@ import type { BackupFileDto, NotifyChannel, SettingsDto } from '@home-stock/shar
 import { api } from '../api';
 import { clearStoredToken } from '../auth/token';
 import BackButton from '../components/BackButton.vue';
+import ChevronIcon from '../components/ChevronIcon.vue';
 import { useTheme, type ThemePreference } from '../composables/useTheme';
 
 const router = useRouter();
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
+
+/** 发送日志折叠态（2026-11-16 用户决策：排障信息默认收起） */
+const logsOpen = ref(false);
+
+/** 渠道代号 → 中文（与通知页 channelLabel 同映射；inapp/scheduler 是开发代号不直露） */
+function channelLabel(channel: string | null): string {
+  if (channel === 'email') return '邮件';
+  if (channel === 'wecom') return '企业微信';
+  if (channel === 'inapp') return '应用内';
+  if (channel === 'scheduler') return '定时任务';
+  return channel ?? '未知';
+}
 
 const loading = ref(true);
 const saving = ref(false);
@@ -563,21 +576,8 @@ onMounted(() => {
       <section id="sec-notify" v-show="activeTab === 'notify'" class="card">
         <h2 class="section-title">通知设置</h2>
 
-        <!-- 应用内：固有渠道不可关闭，徽章表达状态而非像缺了开关 -->
-        <div id="sec-inapp" class="channel-block">
-          <div class="channel-block-head">
-            <h3 class="sub-title">应用内通知</h3>
-            <span class="badge tone-green">始终开启</span>
-          </div>
-          <p class="muted-text">提醒扫描产生的站内提醒直接出现在「通知」页，无需配置。</p>
-          <button class="ghost-btn" type="button" data-channel="inapp" :disabled="testing === 'inapp'" @click="testSend('inapp')">
-            发送站内测试通知
-          </button>
-          <p v-if="testResult?.channel === 'inapp'" class="test-result" :class="{ 'is-error': !testResult.ok }" role="status">
-            {{ testResult.text }}
-          </p>
-        </div>
-
+        <!-- 应用内通知（inapp）：始终开启、无配置项，不设渠道块（2026-11-16 用户决策整块删除）——
+             站内提醒直接出现在「通知」页；server 端 inapp.enabled 不在此表单暴露，保持原值不受影响 -->
         <div id="sec-email" class="channel-block">
           <div class="channel-block-head">
             <h3 class="sub-title">邮件渠道</h3>
@@ -692,15 +692,29 @@ onMounted(() => {
       </div>
 
         <!-- 发送日志固定显示（空数据时给空态，而非整卡消失功能不可见） -->
-        <div class="channel-block">
-          <h3 class="sub-title">发送日志</h3>
-          <p v-if="!logs.length" class="muted-text">暂无发送记录；触发提醒扫描或发送渠道测试后，记录会出现在这里。</p>
-          <ul v-else class="log-list">
-            <li v-for="l in logs.slice(0, 5)" :key="l.id" class="log-item" :class="{ 'is-error': l.level === 'error' }">
-              <span class="log-channel">{{ l.channel }}</span>
-              <span class="log-message">{{ l.message }}</span>
-            </li>
-          </ul>
+        <div class="channel-block log-block">
+          <!-- 2026-11-16 用户决策：排障信息默认收起（日常不可见），点击标题展开；
+               渠道代号中文化（inapp/scheduler 是开发代号） -->
+          <button
+            class="sub-title log-toggle"
+            type="button"
+            :aria-expanded="logsOpen"
+            @click="logsOpen = !logsOpen"
+          >
+            发送日志（{{ logs.length }}）
+            <ChevronIcon :rotate="logsOpen ? 90 : 0" />
+          </button>
+          <div class="logs-collapse" :class="{ open: logsOpen }">
+            <div class="logs-collapse-inner">
+              <p v-if="!logs.length" class="muted-text">暂无发送记录；触发提醒扫描或发送渠道测试后，记录会出现在这里。</p>
+              <ul v-else class="log-list">
+                <li v-for="l in logs.slice(0, 8)" :key="l.id" class="log-item" :class="{ 'is-error': l.level === 'error' }">
+                  <span class="log-channel">{{ channelLabel(l.channel) }}</span>
+                  <span class="log-message">{{ l.message }}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -1252,6 +1266,48 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* 发送日志折叠（铁律 7 Grid 0fr→1fr）：标题行可点击，默认收起 */
+.log-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--color-muted);
+  cursor: pointer;
+  text-align: left;
+}
+.log-toggle:hover {
+  color: var(--color-ink);
+}
+.log-toggle:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 1.2px var(--color-ink),
+    0 0 0 4.5px var(--ring-outer);
+  border-radius: var(--radius-s);
+}
+.logs-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.logs-collapse.open {
+  grid-template-rows: 1fr;
+}
+.logs-collapse > .logs-collapse-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .logs-collapse {
+    transition: none;
+  }
 }
 </style>
 <style scoped>

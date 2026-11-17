@@ -252,35 +252,22 @@ describe('提醒/测试发送 HTTP API', () => {
   });
 
   it('POST /api/settings/notify-test 指定渠道发测试消息；未知渠道 → 400', async () => {
-    const ok = await request(app.getHttpServer()).post('/api/settings/notify-test').send({ channel: 'inapp' });
+    // 2026-11-16 inapp 渠道测试发送已移除（无配置项不可测），对照组改用 email
+    const ok = await request(app.getHttpServer()).post('/api/settings/notify-test').send({ channel: 'email' });
     expect(ok.status).toBe(201);
-    expect(ok.body.data.results.inapp).toMatchObject({ ok: true });
 
     const bad = await request(app.getHttpServer()).post('/api/settings/notify-test').send({ channel: 'sms' });
     expect(bad.status).toBe(400);
     expect(bad.body.code).toBe('VALIDATION_ERROR');
   });
 
-  it('notify-test 真实写一条站内通知（2026-11-16 用户反馈反转 R3：inapp 测试必须可见，否则渠道验证无意义）', async () => {
+  it('notify-test 拒绝 inapp 渠道（2026-11-16 用户决策：inapp 无配置项，测试发送只会让开发术语泄漏进界面）', async () => {
     const before = await request(app.getHttpServer()).get('/api/notifications');
-    await request(app.getHttpServer()).post('/api/settings/notify-test').send({ channel: 'inapp' });
+    const res = await request(app.getHttpServer()).post('/api/settings/notify-test').send({ channel: 'inapp' });
+    expect(res.status).toBe(400);
     const after = await request(app.getHttpServer()).get('/api/notifications');
-    // 站内渠道的「送达」就是出现在通知列表：测试消息必须真实写入（未读、收件箱可见）
-    expect(after.body.data).toHaveLength(before.body.data.length + 1);
-    expect(after.body.unreadCount).toBe(before.body.unreadCount + 1);
-    const created = after.body.data[0];
-    expect(created.itemId).toBe(0); // 非物品行：不可点开详情，可「完成」清理
-    expect(created.itemName).toContain('测试');
-  });
-
-  it('notify-test 写一条 info 级别的 notification_logs 作为可观察证据（评审 R3）', async () => {
-    await request(app.getHttpServer()).post('/api/settings/notify-test').send({ channel: 'inapp' });
-    const logs = await request(app.getHttpServer()).get('/api/notifications/logs');
-    const infoLog = logs.body.data.find(
-      (l: { channel: string; level: string }) => l.channel === 'inapp' && l.level === 'info',
-    );
-    expect(infoLog).toBeDefined();
-    expect(infoLog.message).toContain('测试');
+    expect(after.body.data).toHaveLength(before.body.data.length);
+    expect(after.body.unreadCount).toBe(before.body.unreadCount);
   });
 
   it('POST /api/settings/notify-test 邮件渠道未配置 → ok:false 且写失败日志（不崩）', async () => {

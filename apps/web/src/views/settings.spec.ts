@@ -611,8 +611,8 @@ describe('SettingsView 分组标签页', () => {
     expect(shown(wrapper.find('#sec-remind'))).toBe(false);
     expect(chipOf(wrapper, '通知').classes()).toContain('active');
     expect(chipOf(wrapper, '外观').classes()).not.toContain('active');
-    // 三渠道子块 + 发送日志同屏
-    expect(wrapper.find('#sec-inapp').exists()).toBe(true);
+    // 2026-11-16 inapp 渠道块整块删除（无配置项不设块），可配置渠道只剩邮件/企微
+    expect(wrapper.find('#sec-inapp').exists()).toBe(false);
     expect(wrapper.find('#sec-email').exists()).toBe(true);
     expect(wrapper.find('#sec-wecom').exists()).toBe(true);
   });

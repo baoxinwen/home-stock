@@ -35,6 +35,11 @@ export class NotifyTestController {
     if (!NOTIFY_CHANNELS.includes(channel)) {
       throw new ApiException(400, API_ERROR_CODES.VALIDATION_ERROR, `未知渠道：${String(body?.channel)}`);
     }
+    // 2026-11-16 用户决策：inapp 渠道「始终开启、无需配置」，测试发送没有验证对象，
+    // 只会让开发术语（测试消息/inapp 日志）泄漏进用户界面——拒绝并提示
+    if (channel === 'inapp') {
+      throw new ApiException(400, API_ERROR_CODES.VALIDATION_ERROR, '应用内通知无需测试发送');
+    }
     const raw = await this.settings.getRaw();
     const today = localDate(new Date());
     const result = await this.dispatcher.dispatchOne(
@@ -49,12 +54,6 @@ export class NotifyTestController {
       },
       raw,
     );
-    // 2026-11-16 用户反馈「应用内通知貌似没用」：站内渠道的「送达」就是出现在通知列表，
-    // inapp 测试必须真实落一条站内通知（R3 的「不写表」决策对站内渠道不成立——
-    // email/wecom 测试发真实邮件可见，inapp 不写则永远看不到效果）
-    if (channel === 'inapp' && result.ok) {
-      this.logs.createTestNotification('【家庭库存】测试消息');
-    }
     this.logs.log(
       channel,
       'info',
