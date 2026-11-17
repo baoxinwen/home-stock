@@ -135,7 +135,8 @@ onMounted(load);
       </div>
       <div class="sum-card">
         <span class="sum-label">本月浪费金额</span>
-        <span class="sum-value num">¥{{ formatAmount(monthly.amount) }}</span>
+        <!-- 评审 L-H1：完整值入口（320px 窄卡裁切时经 title 可读全值） -->
+        <span class="sum-value num" :title="`¥${formatAmount(monthly.amount)}`">¥{{ formatAmount(monthly.amount) }}</span>
       </div>
     </section>
 
@@ -254,6 +255,12 @@ onMounted(load);
   font-size: 20px;
   font-weight: var(--fw-semibold);
   color: var(--color-ink);
+  /* 评审 L-H1：320px 三列卡内容宽仅 ~67px，¥1,234.56 即溢出 32px（运行时实测）——
+     防溢出三件套 + span 上完整值 title（与 OverviewView kpi-value 同语言） */
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .sum-unit {
   font-size: 12px;

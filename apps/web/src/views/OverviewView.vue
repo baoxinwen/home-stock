@@ -211,7 +211,8 @@ onMounted(load);
       <section class="kpi-row" aria-label="总览指标">
         <div class="kpi-card enter">
           <span class="kpi-label">库存总价值</span>
-          <span class="kpi-value num">{{ hasAnyPrice ? `¥${formatAmount(overview.value)}` : '—' }}</span>
+          <!-- 评审 L-H1：kpi-value 已有防溢出三件套，补完整值 title -->
+          <span class="kpi-value num" :title="hasAnyPrice ? `¥${formatAmount(overview.value)}` : '—'">{{ hasAnyPrice ? `¥${formatAmount(overview.value)}` : '—' }}</span>
           <span class="kpi-sub">{{ overview.count }} 件在库<span v-if="!hasAnyPrice && overview.count > 0"> · 未录价格</span></span>
         </div>
         <div class="kpi-card enter" style="animation-delay: 40ms">
@@ -221,7 +222,7 @@ onMounted(load);
         </div>
         <div class="kpi-card enter" style="animation-delay: 80ms">
           <span class="kpi-label">本月浪费</span>
-          <span class="kpi-value num kpi-red">¥{{ formatAmount(wasteStats?.totalAmount ?? 0) }}</span>
+          <span class="kpi-value num kpi-red" :title="`¥${formatAmount(wasteStats?.totalAmount ?? 0)}`">¥{{ formatAmount(wasteStats?.totalAmount ?? 0) }}</span>
           <span class="kpi-sub">{{ wasteStats?.totalCount ?? 0 }} 件 · 上月 ¥{{ formatAmount(prevWaste.amount) }}</span>
         </div>
         <div class="kpi-card enter" style="animation-delay: 120ms">

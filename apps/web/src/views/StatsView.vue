@@ -236,7 +236,8 @@ onMounted(() => {
       </div>
       <div class="kpi-card enter" style="animation-delay: 40ms">
         <span class="kpi-label">浪费金额</span>
-        <span class="kpi-value kpi-money overview-amount num">{{
+        <!-- 评审 L-H1：完整值入口 -->
+        <span class="kpi-value kpi-money overview-amount num" :title="stats ? `¥${formatAmount(stats.totalAmount)}` : '—'">{{
           stats ? `¥${formatAmount(stats.totalAmount)}` : '—'
         }}</span>
         <span v-if="stats" class="kpi-delta" :class="deltaClass(wasteAmountDelta)">{{ deltaLabel(wasteAmountDelta) }}</span>
@@ -247,7 +248,10 @@ onMounted(() => {
       </div>
       <div class="kpi-card enter" style="animation-delay: 120ms">
         <span class="kpi-label">库存总价值</span>
-        <span class="kpi-value kpi-money num">{{ baseLoading ? '—' : hasAnyPrice ? `¥${formatAmount(overview.value)}` : '— · 未录价格' }}</span>
+        <span
+          class="kpi-value kpi-money num"
+          :title="baseLoading ? '—' : hasAnyPrice ? `¥${formatAmount(overview.value)}` : '— · 未录价格'"
+        >{{ baseLoading ? '—' : hasAnyPrice ? `¥${formatAmount(overview.value)}` : '— · 未录价格' }}</span>
       </div>
       <!-- 2026-11-11 图表扩充：损耗率 = 选中月浪费金额 ÷ 同月入库金额 -->
       <div class="kpi-card enter" style="animation-delay: 160ms">
@@ -434,6 +438,11 @@ onMounted(() => {
 }
 .kpi-money {
   font-size: 22px;
+  /* 评审 L-H1：320px 双列卡 ¥12,345.67 文本 121px > 107px 可用宽（运行时实测）——防溢出三件套，
+     完整值经 span title 提供 */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 /* KPI 环比（浪费上升=坏红、下降=好绿） */

@@ -328,7 +328,8 @@ onMounted(() => {
       </button>
       <div class="ov-card">
         <span class="ov-label">库存总价值</span>
-        <span class="ov-value num">{{ hasAnyPrice ? `¥${overview.value.toFixed(2)}` : '—' }}</span>
+        <!-- 评审 L-H1：完整值入口 -->
+        <span class="ov-value num" :title="hasAnyPrice ? `¥${overview.value.toFixed(2)}` : '—'">{{ hasAnyPrice ? `¥${overview.value.toFixed(2)}` : '—' }}</span>
       </div>
     </section>
 
@@ -679,6 +680,11 @@ button.ov-card:active {
   font-weight: var(--fw-semibold);
   color: var(--color-ink);
   line-height: 1.2;
+  /* 评审 L-H1：¥ 大额无断点字符不可折行，320px 双列卡会横向溢出——防溢出三件套 + title 完整值 */
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .ov-unit {
   font-size: 12px;
