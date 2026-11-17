@@ -15,10 +15,18 @@ const props = defineProps<{
 }>();
 
 const max = computed(() => Math.max(0, ...props.buckets.map((b) => b.amount)));
+
+/** role=img 会遮蔽子节点文本——全量数值（月/金额/件数）必须拼进 aria-label（评审 A-H1） */
+const ariaLabel = computed(() => {
+  const parts = props.buckets.map(
+    (b) => `${Number(b.month.slice(5))}月 ¥${formatAmount(b.amount)}（${b.count} 件）`,
+  );
+  return `近 ${props.buckets.length} 个月${props.label ?? '浪费'}金额：${parts.join('，')}`;
+});
 </script>
 
 <template>
-  <div class="trend-chart" role="img" :aria-label="`近 ${buckets.length} 个月${label ?? '浪费'}金额柱状图`">
+  <div class="trend-chart" role="img" :aria-label="ariaLabel">
     <div v-for="b in buckets" :key="b.month" class="trend-col">
       <!-- ¥0 月不渲染金额标签（六个 ¥0.00 是视觉噪音）；有归档时件数小标在金额下 -->
       <span v-if="b.amount > 0" class="trend-val num">¥{{ formatAmount(b.amount) }}</span>

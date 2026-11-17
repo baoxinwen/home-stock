@@ -35,6 +35,19 @@ describe('InOutTrendChart 入库与浪费对比', () => {
     expect(groups[0].findAll('.inout-bar')).toHaveLength(2);
   });
 
+  it('aria 携带全量数值（role=img 遮蔽子节点，label 必须自含数据——A-H1）', () => {
+    const wrapper = mount(InOutTrendChart, {
+      props: { purchase, waste, currentPeriod: '2026-11' },
+    });
+    const label = wrapper.attributes('aria-label') ?? '';
+    // 入库与浪费两系列的代表值 + 月份
+    expect(label).toContain('¥22.50');
+    expect(label).toContain('¥988.20');
+    expect(label).toContain('¥39.70');
+    expect(label).toContain('¥94.80');
+    expect(label).toContain('11月');
+  });
+
   it('当前月两柱带 now 高亮类；月份标签逐组渲染', () => {
     const wrapper = mount(InOutTrendChart, {
       props: { purchase, waste, currentPeriod: '2026-11' },

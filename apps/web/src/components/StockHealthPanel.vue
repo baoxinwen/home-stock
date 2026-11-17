@@ -22,11 +22,13 @@ const FRESH_SEGS = [
 ] as const;
 
 const status = computed(() => stockStatusSplit(props.items));
+/** 分段色直引全局 tone token（评审 C-H1：scoped :root 中转变量编译为 [data-v]:root 永不匹配，
+ *  conic-gradient 整条失效致环形透明——与 CategoryDonut 同款直引写法） */
 const STATUS_SEGS = [
-  { key: 'expired', label: '已过期', cls: 'st-expired' },
-  { key: 'expiring', label: '临期', cls: 'st-expiring' },
-  { key: 'opened', label: '已开封', cls: 'st-opened' },
-  { key: 'ok', label: '正常', cls: 'st-ok' },
+  { key: 'expired', label: '已过期', cls: 'st-expired', color: 'var(--tone-red-fg)' },
+  { key: 'expiring', label: '临期', cls: 'st-expiring', color: 'var(--tone-yellow-fg)' },
+  { key: 'opened', label: '已开封', cls: 'st-opened', color: 'var(--tone-blue-fg)' },
+  { key: 'ok', label: '正常', cls: 'st-ok', color: 'var(--tone-green-fg)' },
 ] as const;
 
 const statusTotal = computed(() => props.items.length);
@@ -40,7 +42,7 @@ const donutStyle = computed(() => {
   const parts = segs.map((s) => {
     const from = (acc / statusTotal.value) * 100;
     acc += s.n;
-    return `var(--${s.cls}-color) ${from}% ${(acc / statusTotal.value) * 100}%`;
+    return `${s.color} ${from}% ${(acc / statusTotal.value) * 100}%`;
   });
   return `conic-gradient(${parts.join(', ')})`;
 });
@@ -125,7 +127,12 @@ const statusAria = computed(
 .seg-d30 { background: var(--tone-blue-fg); }
 .seg-d90 { background: var(--tone-green-fg); }
 .seg-over90 { background: var(--tone-green-bg); outline: 1px solid var(--tone-green-fg); outline-offset: -1px; }
-.seg-undated { background: var(--color-track); }
+/* 评审 C-M3：未填日期段与底轨同为 --color-track（1.0:1 不可辨）——沿用 seg-over90 空心语言补描边 */
+.seg-undated {
+  background: var(--color-track);
+  outline: 1px solid var(--color-muted);
+  outline-offset: -1px;
+}
 
 /* 环形 + 图例左右排 */
 .status-row {
@@ -163,13 +170,7 @@ const statusAria = computed(
   font-size: 11px;
   color: var(--color-muted);
 }
-/* 环形分段色（conic-gradient 引用） */
-:root {
-  --st-expired-color: var(--tone-red-fg);
-  --st-expiring-color: var(--tone-yellow-fg);
-  --st-opened-color: var(--tone-blue-fg);
-  --st-ok-color: var(--tone-green-fg);
-}
+/* 图例点：与环形分段同色（直引 tone token） */
 .dot.st-expired { background: var(--tone-red-fg); }
 .dot.st-expiring { background: var(--tone-yellow-fg); }
 .dot.st-opened { background: var(--tone-blue-fg); }

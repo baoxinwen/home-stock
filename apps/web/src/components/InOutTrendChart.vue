@@ -23,9 +23,14 @@ const max = computed(() =>
   ),
 );
 
-const ariaLabel = computed(
-  () => `近 ${props.purchase.length} 个月入库与浪费金额对比柱状图`,
-);
+/** role=img 遮蔽子节点文本（窄屏金额标签还 display:none）——两系列全量数值拼进 aria-label（评审 A-H1） */
+const ariaLabel = computed(() => {
+  const parts = props.purchase.map((b) => {
+    const wasteBucket = props.waste.find((w) => w.month === b.month);
+    return `${Number(b.month.slice(5))}月 入库 ¥${formatAmount(b.amount)}、浪费 ¥${formatAmount(wasteBucket?.amount ?? 0)}`;
+  });
+  return `近 ${props.purchase.length} 个月入库与浪费金额对比：${parts.join('；')}`;
+});
 
 function isNow(month: string): boolean {
   return month === props.currentPeriod;
