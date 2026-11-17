@@ -56,12 +56,16 @@ function badgeFor(tab: (typeof tabs)[number]): number | null {
   <!-- PC≥1024px：顶部导航 + 内容区；通知入口在顶栏铃铛（NotificationPopover，方案「轻量下拉」）。
        移动端保持单列 + 底部 tabbar，通知仍走全页 -->
   <div v-if="isDesktop && showNav" class="topnav-shell">
+    <!-- 评审 A-L2：跳到主内容——桌面 main 前有 7 个导航停靠点 -->
+    <a class="skip-link" href="#main">跳到主内容</a>
     <AppTopNav />
-    <main class="topnav-main">
+    <main id="main" class="topnav-main" tabindex="-1">
       <RouterView />
     </main>
   </div>
   <template v-else>
+    <!-- 评审 A-L2：移动分支此前无 main landmark、无跳转入口（协调方复核补充） -->
+    <a v-if="showNav" class="skip-link" href="#main">跳到主内容</a>
     <!-- 移动全局顶栏：brand + 通知铃铛（红点未读，点击进通知全页） -->
     <header v-if="showNav" class="mobile-topbar">
       <span class="mobile-brand">家庭库存</span>
@@ -86,9 +90,10 @@ function badgeFor(tab: (typeof tabs)[number]): number | null {
         </RouterLink>
       </div>
     </header>
-    <div class="app-shell">
+    <!-- app-shell 由 div 改 main（评审 A-L2）：移动端此前全站无 main landmark；tabindex=-1 承接路由切换焦点 -->
+    <main id="main" class="app-shell" tabindex="-1">
       <RouterView />
-    </div>
+    </main>
     <nav v-if="showNav" class="tabbar" aria-label="主导航">
       <div class="tabbar-inner">
         <RouterLink v-for="t in tabs" :key="t.to" class="tab-item" :to="t.to">

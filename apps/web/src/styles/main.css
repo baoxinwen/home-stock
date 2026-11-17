@@ -86,6 +86,47 @@
   box-sizing: border-box;
 }
 
+/* 评审 A-H2：视觉隐藏但保留可访问性（StreamText 全文节点、表单原生控件等复用） */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 评审 A-L2：跳到主内容——每个页面壳的第一个可聚焦元素 */
+.skip-link {
+  position: absolute;
+  left: 16px;
+  top: -48px;
+  z-index: 100;
+  padding: 8px 14px;
+  border-radius: var(--radius-m);
+  background: var(--color-ink);
+  color: var(--color-on-ink);
+  font-size: 14px;
+  text-decoration: none;
+  transition: top 120ms ease-out;
+}
+.skip-link:focus-visible {
+  top: 12px;
+  outline: none;
+  box-shadow:
+    0 0 0 1.2px var(--color-ink),
+    0 0 0 4.5px var(--ring-outer);
+}
+
+/* 路由切换后程序焦点容器（评审 A-H3）：接收焦点但不显示键盘焦点环 */
+main[tabindex='-1']:focus,
+main[tabindex='-1']:focus-visible {
+  outline: none;
+}
+
 html {
   /* 滚动条常驻（宽度锁）：页面切换时内容高度变化不再引起视口宽度跳变。
      注：本环境 Chromium 对 html 的 scrollbar-gutter: stable 未按预期预留槽位，

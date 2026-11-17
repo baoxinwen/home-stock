@@ -6,12 +6,16 @@ import { mount } from '@vue/test-utils';
 import StreamText from './StreamText.vue';
 
 describe('StreamText', () => {
-  it('按字符逐个渲染，文本可读（screen reader 用 aria-label）', () => {
+  it('按字符逐个渲染，全文经 sr-only 节点对 AT 可读（A-H2：generic 上的 aria-label 不可靠）', () => {
     const wrapper = mount(StreamText, { props: { text: '家庭库存' } });
     const chars = wrapper.findAll('.stream-char');
     expect(chars).toHaveLength(4);
     expect(chars.map((c) => c.text())).toEqual(['家', '庭', '库', '存']);
-    expect(wrapper.find('.stream-text').attributes('aria-label')).toBe('家庭库存');
+    // 全文走 sr-only 常驻文本节点，逐字动画字符保持 aria-hidden
+    expect(wrapper.find('.sr-only').text()).toBe('家庭库存');
+    expect(chars.every((c) => c.attributes('aria-hidden') === 'true')).toBe(true);
+    // 不再依赖 generic 元素上的 aria-label（多数 SR 忽略）
+    expect(wrapper.find('.stream-text').attributes('aria-label')).toBeUndefined();
     expect(wrapper.text()).toContain('家庭库存');
   });
 

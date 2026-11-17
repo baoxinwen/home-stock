@@ -23,7 +23,10 @@ const chars = computed(() => Array.from(props.text));
 </script>
 
 <template>
-  <span class="stream-text" :aria-label="text">
+  <span class="stream-text">
+    <!-- 评审 A-H2：generic span 上的 aria-label 多数 SR 忽略（ARIA 1.2 禁止命名 generic），
+         逐字动画字符又全部 aria-hidden——全文必须走 sr-only 常驻节点保证可达 -->
+    <span class="sr-only">{{ text }}</span>
     <span
       v-for="(ch, i) in chars"
       :key="i"
