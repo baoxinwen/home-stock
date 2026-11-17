@@ -13,6 +13,7 @@ import { clearStoredToken } from '../auth/token';
 import BackButton from '../components/BackButton.vue';
 import ChevronIcon from '../components/ChevronIcon.vue';
 import { useTheme, type ThemePreference } from '../composables/useTheme';
+import { useOverlayA11y } from '../composables/useOverlayA11y';
 
 const router = useRouter();
 
@@ -344,6 +345,13 @@ function formatTime(iso: string): string {
 // 体检表 P2-11：恢复二次确认改为应用内面板（与物品删除一致，弃用原生 window.confirm）
 const confirmingRestore = ref(false);
 const pendingRestoreFile = shallowRef<File | null>(null);
+// 评审 A-M1/A-M2：确认面板焦点管理（移焦/Escape/inert/关闭还原），Teleport 到 body 避免被自家 inert 误伤
+const restorePanelEl = ref<HTMLElement | null>(null);
+useOverlayA11y({
+  panel: restorePanelEl,
+  close: cancelRestore,
+  open: confirmingRestore,
+});
 
 async function restore(): Promise<void> {
   backupError.value = '';
@@ -842,19 +850,21 @@ onMounted(() => {
       <p v-if="categoryRows.length === 0 && !categoryError" class="muted-text">还没有类别，添加第一个吧。</p>
     </section>
 
-    <!-- 体检表 P2-11：恢复确认面板（与物品删除同款交互语言） -->
-    <div v-if="confirmingRestore" class="mask" @click.self="cancelRestore">
-      <div class="panel" role="dialog" aria-label="确认恢复备份">
-        <h2 class="panel-title">确认恢复备份？</h2>
-        <p class="confirm-text">
-          将用「{{ pendingRestoreFile?.name }}」覆盖当前全部数据（恢复前会自动生成安全备份）。
-        </p>
-        <div class="confirm-actions">
-          <button class="ghost-btn" type="button" @click="cancelRestore">取消</button>
-          <button class="ghost-btn danger-btn" type="button" @click="confirmRestore">确认恢复</button>
+    <!-- 体检表 P2-11：恢复确认面板（与物品删除同款交互语言）；评审 A-M1：Teleport + 焦点管理 -->
+    <Teleport to="body">
+      <div v-if="confirmingRestore" class="mask" @click.self="cancelRestore">
+        <div ref="restorePanelEl" class="panel" role="dialog" aria-modal="true" aria-label="确认恢复备份" tabindex="-1">
+          <h2 class="panel-title">确认恢复备份？</h2>
+          <p class="confirm-text">
+            将用「{{ pendingRestoreFile?.name }}」覆盖当前全部数据（恢复前会自动生成安全备份）。
+          </p>
+          <div class="confirm-actions">
+            <button class="ghost-btn" type="button" @click="cancelRestore">取消</button>
+            <button class="ghost-btn danger-btn" type="button" @click="confirmRestore">确认恢复</button>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 

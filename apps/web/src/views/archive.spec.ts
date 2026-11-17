@@ -57,7 +57,7 @@ const DATA = [
 async function mountAt() {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-11-07T12:00:00'));
-  const wrapper = mount(ArchiveView);
+  const wrapper = mount(ArchiveView, { global: { stubs: { teleport: true } } });
   await flushPromises();
   return wrapper;
 }

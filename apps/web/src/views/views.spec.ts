@@ -123,7 +123,7 @@ describe('InventoryView', () => {
     try {
       vi.mocked(api.listItems).mockResolvedValue([]);
       const router = await makeRouter('/');
-      const wrapper = mount(InventoryView, { global: { plugins: [router] } });
+      const wrapper = mount(InventoryView, { global: { plugins: [router], stubs: { teleport: true } } });
       await flushPromises();
 
       const input = wrapper.find('input[type="search"]');
@@ -146,7 +146,7 @@ describe('InventoryView', () => {
       makeItem({ id: 4, expiryStatus: 'none', expiryDate: null, effectiveExpiryDate: null, name: '盐' }),
     ]);
     const router = await makeRouter('/');
-    const wrapper = mount(InventoryView, { global: { plugins: [router] } });
+    const wrapper = mount(InventoryView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     const badges = wrapper.findAll('.badge').map((b) => b.classes().join(' ') + '|' + b.text());
@@ -159,7 +159,7 @@ describe('InventoryView', () => {
   it('已开封物品显示「已开封」Pale Blue 角标', async () => {
     vi.mocked(api.listItems).mockResolvedValue([makeItem({ opened: 1, expiryStatus: 'ok' })]);
     const router = await makeRouter('/');
-    const wrapper = mount(InventoryView, { global: { plugins: [router] } });
+    const wrapper = mount(InventoryView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
     expect(wrapper.find('.badge').text()).toBe('已开封');
     expect(wrapper.find('.badge').classes()).toContain('tone-blue');
@@ -168,7 +168,7 @@ describe('InventoryView', () => {
   it('archived 物品不出现（list 默认只查 active，组件不应传 archived）', async () => {
     vi.mocked(api.listItems).mockResolvedValue([]);
     const router = await makeRouter('/');
-    const wrapper = mount(InventoryView, { global: { plugins: [router] } });
+    const wrapper = mount(InventoryView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
     expect(api.listItems).toHaveBeenCalledWith({ q: undefined, category: undefined });
     expect(wrapper.text()).not.toContain('已归档');
@@ -178,7 +178,7 @@ describe('InventoryView', () => {
 describe('ItemFormView', () => {
   it('生产日期+保质期 → 换算过期日期展示', async () => {
     const router = await makeRouter('/items/new');
-    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    const wrapper = mount(ItemFormView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     await wrapper.findAll('button.chip').filter((b) => b.text().includes('生产日期'))[0].trigger('click');
@@ -195,7 +195,7 @@ describe('ItemFormView', () => {
   it('换算结果随表单提交作为 expiryDate 回填', async () => {
     vi.mocked(api.createItem).mockResolvedValue(makeItem({ id: 9 }));
     const router = await makeRouter('/items/new');
-    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    const wrapper = mount(ItemFormView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     await wrapper.find('input[type="text"]').setValue('酸奶');
@@ -213,7 +213,7 @@ describe('ItemFormView', () => {
   it('「长期存储」档：不填过期日期可提交，payload.expiryDate 为 null', async () => {
     vi.mocked(api.createItem).mockResolvedValue(makeItem({ expiryDate: null, effectiveExpiryDate: null }));
     const router = await makeRouter('/items/new');
-    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    const wrapper = mount(ItemFormView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     await wrapper.find('input[type="text"]').setValue('白酒');
@@ -226,7 +226,7 @@ describe('ItemFormView', () => {
 
   it('日期档漏填拦截：direct 档空日期提交报错且不请求', async () => {
     const router = await makeRouter('/items/new');
-    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    const wrapper = mount(ItemFormView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     await wrapper.find('input[type="text"]').setValue('牛奶');
@@ -251,7 +251,7 @@ describe('ItemFormView 清单转库存（M5.2 表单确认范式）', () => {
       },
     ]);
     const router = await makeRouter('/items/new?convert=5');
-    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    const wrapper = mount(ItemFormView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     expect(wrapper.find('.page-title').text()).toBe('转入库存');
@@ -268,7 +268,7 @@ describe('ItemFormView 清单转库存（M5.2 表单确认范式）', () => {
       { id: 5, name: '清单牛奶', quantity: 3, unit: '盒', price: 12.5, categoryId: null, status: 'done' },
     ]);
     const router = await makeRouter('/items/new?convert=5');
-    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    const wrapper = mount(ItemFormView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     // 过期方式选「长期存储」→ payload.expiryDate 为 null
@@ -289,7 +289,7 @@ describe('ItemFormView 清单转库存（M5.2 表单确认范式）', () => {
       { id: 5, name: '已转项', quantity: 1, unit: null, price: null, categoryId: null, status: 'converted' },
     ]);
     const router = await makeRouter('/items/new?convert=5');
-    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    const wrapper = mount(ItemFormView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     expect(wrapper.find('.error-text').text()).toContain('该清单项不存在或已转入库存');
@@ -312,7 +312,7 @@ describe('ItemFormView 图片（0006，选填单图）', () => {
   it('选文件即传：uploadImage 后预览出现，payload 带上传返回的文件名', async () => {
     vi.mocked(api.createItem).mockResolvedValue(makeItem({}));
     const router = await makeRouter('/items/new');
-    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    const wrapper = mount(ItemFormView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     await wrapper.find('input[type="text"]').setValue('带图物品');
@@ -328,7 +328,7 @@ describe('ItemFormView 图片（0006，选填单图）', () => {
   it('移除图片：预览消失，提交 imagePath=null', async () => {
     vi.mocked(api.createItem).mockResolvedValue(makeItem({}));
     const router = await makeRouter('/items/new');
-    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    const wrapper = mount(ItemFormView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     await pickFile(wrapper);
@@ -343,7 +343,7 @@ describe('ItemFormView 图片（0006，选填单图）', () => {
 
   it('超大文件前端预检拦截，不发上传请求', async () => {
     const router = await makeRouter('/items/new');
-    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    const wrapper = mount(ItemFormView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     const input = wrapper.find('input.image-input').element as HTMLInputElement;
@@ -361,7 +361,7 @@ describe('ItemFormView 数量校验', () => {
   it('数量 0 保留为 0，不被偷偷改成 1', async () => {
     vi.mocked(api.createItem).mockResolvedValue(makeItem({}));
     const router = await makeRouter('/items/new');
-    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    const wrapper = mount(ItemFormView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
     await wrapper.find('input[type="text"]').setValue('盐');
     // 盐无保质期 → 切「长期存储」档（日期档空值现被校验拦截）
@@ -374,7 +374,7 @@ describe('ItemFormView 数量校验', () => {
 
   it('数量留空默认 1，非法值报校验错误', async () => {
     const router = await makeRouter('/items/new');
-    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    const wrapper = mount(ItemFormView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
     await wrapper.find('input[type="text"]').setValue('盐');
     await wrapper.findAll('button.chip').filter((b) => b.text().includes('长期存储'))[0].trigger('click');
@@ -391,7 +391,7 @@ describe('ItemFormView 编辑态开封开关', () => {
     vi.mocked(api.listItems).mockResolvedValue([makeItem({ expiryDate: null, effectiveExpiryDate: null, expiryStatus: 'none' })]);
     vi.mocked(api.updateItem).mockResolvedValue(makeItem({}));
     const router = await makeRouter('/items/1/edit');
-    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    const wrapper = mount(ItemFormView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     const longChip = wrapper.findAll('button.chip').find((b) => b.text().includes('长期存储'))!;
@@ -406,7 +406,7 @@ describe('ItemFormView 编辑态开封开关', () => {
     vi.mocked(api.listItems).mockResolvedValue([makeItem({ opened: 0 })]);
     vi.mocked(api.updateItem).mockResolvedValue(makeItem({ opened: 1 }));
     const router = await makeRouter('/items/1/edit');
-    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    const wrapper = mount(ItemFormView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     const checkbox = wrapper.find('input[type="checkbox"]');
@@ -424,7 +424,7 @@ describe('ItemFormView 编辑态开封开关', () => {
     vi.mocked(api.listItems).mockResolvedValue([makeItem({ opened: 1 })]);
     vi.mocked(api.updateItem).mockResolvedValue(makeItem({ opened: 0 }));
     const router = await makeRouter('/items/1/edit');
-    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    const wrapper = mount(ItemFormView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     const checkbox = wrapper.find('input[type="checkbox"]');
@@ -438,7 +438,7 @@ describe('ItemFormView 编辑态开封开关', () => {
 
   it('新建态不显示开封开关', async () => {
     const router = await makeRouter('/items/new');
-    const wrapper = mount(ItemFormView, { global: { plugins: [router] } });
+    const wrapper = mount(ItemFormView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
     expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false);
   });
@@ -451,7 +451,7 @@ describe('ItemDetailView', () => {
       { id: 7, name: '调料', sortOrder: null },
     ]);
     const router = await makeRouter('/items/1');
-    const wrapper = mount(ItemDetailView, { global: { plugins: [router] } });
+    const wrapper = mount(ItemDetailView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     const rowText = wrapper.findAll('.row').map((r) => r.text()).find((t) => t.includes('类别'));
@@ -464,7 +464,7 @@ describe('ItemDetailView', () => {
     vi.mocked(api.listItems).mockResolvedValue([makeItem({})]);
     vi.mocked(api.archiveItem).mockResolvedValue(makeItem({ status: 'archived', archivedReason: 'used_up' }));
     const router = await makeRouter('/items/1');
-    const wrapper = mount(ItemDetailView, { global: { plugins: [router] } });
+    const wrapper = mount(ItemDetailView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     await wrapper.findAll('button').find((b) => b.text() === '归档')!.trigger('click');
@@ -477,7 +477,7 @@ describe('ItemDetailView', () => {
   it('删除需二次确认，弹层含误录提示文案', async () => {
     vi.mocked(api.listItems).mockResolvedValue([makeItem({})]);
     const router = await makeRouter('/items/1');
-    const wrapper = mount(ItemDetailView, { global: { plugins: [router] } });
+    const wrapper = mount(ItemDetailView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     await wrapper.findAll('button').find((b) => b.text() === '删除')!.trigger('click');
@@ -491,7 +491,7 @@ describe('ItemDetailView', () => {
 describe('ItemDetailView 充实化（快捷操作/通知时间线）', () => {
   async function mountDetailAt(id = 1) {
     const router = await makeRouter(`/items/${id}`);
-    const wrapper = mount(ItemDetailView, { global: { plugins: [router] } });
+    const wrapper = mount(ItemDetailView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
     return wrapper;
   }

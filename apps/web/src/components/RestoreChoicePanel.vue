@@ -5,8 +5,12 @@
  * 选项语义：
  * - postpone：顺延过期日 7 天并恢复（宿主需同时清开封——C-1，见 useItemRestore）
  * - force：仍恢复，接受再次被自动归档
+ * 评审 A-M1/A-M2：焦点管理走 useOverlayA11y（移焦/inert/Escape/还原）；
+ * Teleport 到 body——宿主在 #app（归档页）时背景 inert 才不误伤面板自身。
  */
+import { ref } from 'vue';
 import type { ItemDto } from '@home-stock/shared';
+import { useOverlayA11y } from '../composables/useOverlayA11y';
 
 defineProps<{
   item: ItemDto;
@@ -16,11 +20,15 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{ close: []; postpone: []; force: [] }>();
+
+const panelEl = ref<HTMLElement | null>(null);
+useOverlayA11y({ panel: panelEl, close: () => emit('close') });
 </script>
 
 <template>
-  <div class="rcp-mask" @click.self="emit('close')">
-    <div class="rcp-panel" role="dialog" aria-label="恢复过期物品确认">
+  <Teleport to="body">
+    <div class="rcp-mask" @click.self="emit('close')">
+      <div ref="panelEl" class="rcp-panel" role="dialog" aria-modal="true" aria-label="恢复过期物品确认" tabindex="-1">
       <h2 class="rcp-title">「{{ item.name }}」已过期 {{ overdueDays }} 天</h2>
       <p class="rcp-text">
         恢复后若有效过期日仍是过去，下次提醒扫描会把它再次自动归档，且不会再收到提醒。
@@ -32,8 +40,9 @@ const emit = defineEmits<{ close: []; postpone: []; force: [] }>();
         仍要恢复 <span class="rcp-hint">接受再次被自动归档</span>
       </button>
       <button class="rcp-cancel" type="button" @click="emit('close')">取消</button>
-    </div>
+      </div>
   </div>
+  </Teleport>
 </template>
 
 <style scoped>

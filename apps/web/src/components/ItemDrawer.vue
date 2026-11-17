@@ -3,28 +3,19 @@
  * 物品详情抽屉（桌面端）：右侧 440px 滑出，遮罩/Esc 关闭，不丢列表上下文。
  * 内容复用 DetailContent；删除/变更通过事件上抛给宿主刷新列表。
  * 仅桌面渲染（移动端窄屏走 /items/:id 全页）。
+ * 评审 A-M1/A-M2：焦点管理收敛到 useOverlayA11y（打开移焦 + 背景 #app inert
+ * 使 Tab 无法逃出抽屉 + Escape 关闭 + 关闭还原触发点，此前关闭即丢焦点）。
  */
-import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { ref } from 'vue';
 import DetailContent from './DetailContent.vue';
+import { useOverlayA11y } from '../composables/useOverlayA11y';
 
 const props = defineProps<{ itemId: number }>();
 const emit = defineEmits<{ close: []; deleted: []; changed: [] }>();
 
 const panelEl = ref<HTMLElement | null>(null);
 
-function onKeydown(e: KeyboardEvent): void {
-  if (e.key === 'Escape') emit('close');
-}
-
-watch(
-  () => props.itemId,
-  () => {
-    window.addEventListener('keydown', onKeydown);
-    void nextTick(() => panelEl.value?.focus());
-  },
-  { immediate: true },
-);
-onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
+useOverlayA11y({ panel: panelEl, close: () => emit('close') });
 </script>
 
 <template>

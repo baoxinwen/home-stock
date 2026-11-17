@@ -69,8 +69,9 @@ test('清单添加→勾选→转库存（表单确认）→清空已转换', as
   await page.getByRole('link', { name: '清单', exact: true }).click();
   await expect(page.locator('h1.page-title')).toHaveText('购物清单');
   await page.getByRole('button', { name: '清空已转换' }).click();
-  await expect(page.getByRole('button', { name: '确认清空已转换？' })).toBeVisible();
-  await page.getByRole('button', { name: '确认清空已转换？' }).click();
+  // 2026-11-16 评审 W-M6：二次确认文案补后果与不可恢复说明
+  await expect(page.getByRole('button', { name: '确认清空？已转库存的记录将被删除，不可恢复' })).toBeVisible();
+  await page.getByRole('button', { name: '确认清空？已转库存的记录将被删除，不可恢复' }).click();
   await expect(page.locator('.clear-converted')).toHaveCount(0);
   const cleared = await apiGet<MinimalShoppingItem[]>(request, '/api/shopping-items');
   expect(cleared).toHaveLength(0);

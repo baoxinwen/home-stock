@@ -88,7 +88,8 @@ test('录入→临期提醒→去重→过期自动归档→浪费统计', async
   await expect(drawer.locator('.item-name')).toHaveText('牛奶E2E');
   await shot(page, 'flow-a-detail');
   await drawer.getByRole('button', { name: '归档' }).click();
-  await drawer.locator('.option').first().click(); // 用完
+  // 2026-11-16 评审：归档面板 Teleport 到 body（焦点管理），不再位于抽屉子树
+  await page.locator('.option').first().click(); // 用完
   // 归档动作达成（抽屉内状态翻转为已归档），关闭抽屉回列表
   await expect(drawer).toContainText('已归档 · 用完');
   await drawer.locator('.drawer-close').click();

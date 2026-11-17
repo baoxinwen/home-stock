@@ -55,11 +55,6 @@ function makeItem(patch: Partial<ItemDto>): ItemDto {
   } as ItemDto;
 }
 
-async function titleOf(wrapper: ReturnType<typeof mount>, selector: string): Promise<string | undefined> {
-  await flushPromises();
-  return wrapper.find(selector).attributes('title');
-}
-
 describe('金额卡完整值入口（L-H1）', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] });

@@ -74,7 +74,7 @@ async function mountArchived() {
   vi.setSystemTime(new Date('2026-11-07T12:00:00'));
   const router = await makeRouter();
   const wrapper = mount(DetailContent, {
-    global: { plugins: [router] },
+    global: { plugins: [router], stubs: { teleport: true } },
     props: { itemId: 17 },
   });
   await flushPromises();
@@ -170,7 +170,7 @@ describe('DetailContent I-2 数量步进连点不丢更新', () => {
     );
 
     const router = await makeRouter();
-    const wrapper = mount(DetailContent, { global: { plugins: [router] }, props: { itemId: active.id } });
+    const wrapper = mount(DetailContent, { global: { plugins: [router], stubs: { teleport: true } }, props: { itemId: active.id } });
     await flushPromises();
 
     const plus = wrapper.find('button[aria-label="增加数量"]');
@@ -196,7 +196,7 @@ describe('DetailContent 物品图片（0006）', () => {
     const active = makeItem({ status: 'active', imagePath: `${'f'.repeat(32)}.png` });
     vi.mocked(api.listItems).mockReset().mockResolvedValue([active]);
     const router = await makeRouter();
-    const wrapper = mount(DetailContent, { global: { plugins: [router] }, props: { itemId: active.id } });
+    const wrapper = mount(DetailContent, { global: { plugins: [router], stubs: { teleport: true } }, props: { itemId: active.id } });
     await flushPromises();
 
     const link = wrapper.find('.avatar-photo');
@@ -207,7 +207,7 @@ describe('DetailContent 物品图片（0006）', () => {
 
     const plain = makeItem({ status: 'active', imagePath: null });
     vi.mocked(api.listItems).mockReset().mockResolvedValue([plain]);
-    const w2 = mount(DetailContent, { global: { plugins: [router] }, props: { itemId: plain.id } });
+    const w2 = mount(DetailContent, { global: { plugins: [router], stubs: { teleport: true } }, props: { itemId: plain.id } });
     await flushPromises();
     expect(w2.find('.avatar-photo').exists()).toBe(false);
     expect(w2.find('span.avatar').exists()).toBe(true);

@@ -74,7 +74,7 @@ describe('SettingsView', () => {
   it('加载设置并回填：提醒时刻 / 默认阈值 / 自动归档开关', async () => {
     vi.mocked(api.getSettings).mockResolvedValue(makeSettings({ reminder_hour: 20, default_remind_days: 5, auto_archive_expired: 0 }));
     const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     expect((wrapper.find('#reminder-hour').element as HTMLSelectElement).value).toBe('20');
@@ -85,7 +85,7 @@ describe('SettingsView', () => {
   it('加载失败 → 保存按钮禁用，提交不发请求；重新加载成功后恢复可保存（I-3）', async () => {
     vi.mocked(api.getSettings).mockRejectedValueOnce(new Error('网络错误'));
     const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     expect(wrapper.find('.form-error').text()).toContain('网络错误');
@@ -98,7 +98,7 @@ describe('SettingsView', () => {
 
     // 刷新后加载成功 → 失败态清除，恢复可保存
     vi.mocked(api.getSettings).mockResolvedValueOnce(makeSettings());
-    const wrapper2 = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper2 = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
     expect(wrapper2.find('form.settings-form button[type="submit"]').attributes('disabled')).toBeUndefined();
   });
@@ -106,7 +106,7 @@ describe('SettingsView', () => {
   it('默认阈值非法（0）→ 阻止保存并显示校验错误', async () => {
     vi.mocked(api.getSettings).mockResolvedValue(makeSettings());
     const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     await wrapper.find('#default-remind-days').setValue('0');
@@ -134,7 +134,7 @@ describe('SettingsView', () => {
     );
     vi.mocked(api.updateSettings).mockResolvedValue(makeSettings());
     const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     await wrapper.find('#reminder-hour').setValue('7');
@@ -159,7 +159,7 @@ describe('SettingsView', () => {
     );
     vi.mocked(api.updateSettings).mockResolvedValue(makeSettings());
     const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     await wrapper.find('#email-pass').setValue('new-secret');
@@ -176,7 +176,7 @@ describe('SettingsView', () => {
     );
     vi.mocked(api.updateSettings).mockResolvedValue(makeSettings());
     const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     const pass = wrapper.find('#email-pass');
@@ -191,7 +191,7 @@ describe('SettingsView', () => {
     vi.mocked(api.getSettings).mockResolvedValue(makeSettings());
     vi.mocked(api.notifyTest).mockResolvedValue({ results: { email: { ok: true } } });
     const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     await wrapper.find('button[data-channel="email"]').trigger('click');
@@ -204,7 +204,7 @@ describe('SettingsView', () => {
     vi.mocked(api.getSettings).mockResolvedValue(makeSettings());
     vi.mocked(api.notifyTest).mockResolvedValue({ results: { wecom: { ok: false, error: '企业微信返回错误 40001' } } });
     const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     await wrapper.find('button[data-channel="wecom"]').trigger('click');
@@ -234,7 +234,7 @@ describe('SettingsView 备份与恢复（M8）/ 退出登录（M9.2）', () => {
       { name: 'stock-20260101-010101.db', size: 2048, createdAt: '2026-01-01T01:01:01Z' },
     ]);
     const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     const items = wrapper.findAll('.backup-item');
@@ -246,7 +246,7 @@ describe('SettingsView 备份与恢复（M8）/ 退出登录（M9.2）', () => {
   it('备份下载改为按钮触发 downloadBackup（I-7：口令不再进 URL）', async () => {
     vi.mocked(api.getSettings).mockResolvedValue(makeSettings());
     const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     const btn = wrapper.find('button.backup-download');
@@ -260,7 +260,7 @@ describe('SettingsView 备份与恢复（M8）/ 退出登录（M9.2）', () => {
     vi.mocked(api.getSettings).mockResolvedValue(makeSettings());
     vi.mocked(api.downloadBackup).mockRejectedValueOnce(new Error('下载失败（HTTP 500）'));
     const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     await wrapper.find('button.backup-download').trigger('click');
@@ -272,7 +272,7 @@ describe('SettingsView 备份与恢复（M8）/ 退出登录（M9.2）', () => {
     vi.mocked(api.getSettings).mockResolvedValue(makeSettings());
     const confirm = vi.spyOn(window, 'confirm');
     const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     selectFile(wrapper);
@@ -301,7 +301,7 @@ describe('SettingsView 备份与恢复（M8）/ 退出登录（M9.2）', () => {
         { name: 'pre-restore-20260101-010101-000.db', size: 1024, createdAt: '2026-01-01T01:01:01Z' },
       ]);
     const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     const file = selectFile(wrapper);
@@ -326,7 +326,7 @@ describe('SettingsView 备份与恢复（M8）/ 退出登录（M9.2）', () => {
       .mockResolvedValue(makeSettings({ reminder_hour: 20 })); // 恢复后的新库
     vi.mocked(api.restoreBackup).mockResolvedValue(makeRestoreResult());
     const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
     expect((wrapper.find('#reminder-hour').element as HTMLSelectElement).value).toBe('8');
 
@@ -347,7 +347,7 @@ describe('SettingsView 备份与恢复（M8）/ 退出登录（M9.2）', () => {
   it('未选择文件就点恢复 → 提示且不调用 API', async () => {
     vi.mocked(api.getSettings).mockResolvedValue(makeSettings());
     const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     await wrapper.find('button.restore-btn').trigger('click');
@@ -360,7 +360,7 @@ describe('SettingsView 备份与恢复（M8）/ 退出登录（M9.2）', () => {
     vi.mocked(api.getSettings).mockResolvedValue(makeSettings());
     setStoredToken('family-secret');
     const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
     await wrapper.find('button.logout-btn').trigger('click');
@@ -374,7 +374,7 @@ describe('SettingsView 备份与恢复（M8）/ 退出登录（M9.2）', () => {
 describe('SettingsView 数据概览（充实化）', () => {
   async function mountSettings() {
     const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
     return wrapper;
   }
@@ -417,7 +417,7 @@ describe('SettingsView 备份文件名复制（铁律 10 反馈自熄）', () =>
       { name: 'stock-20261108-020000.db', size: 1024, createdAt: '2026-11-07T18:00:00.000Z' },
     ]);
     const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
     return wrapper;
   }
@@ -474,7 +474,7 @@ describe('SettingsView 外观（主题切换）', () => {
   async function mountSettingsAt() {
     vi.mocked(api.getSettings).mockResolvedValue(makeSettings());
     const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
     return wrapper;
   }
@@ -523,7 +523,7 @@ describe('SettingsView 类别管理（D-2）', () => {
       makeCategory(2, '药品'),
     ]);
     const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
     return wrapper;
   }
@@ -589,7 +589,7 @@ describe('SettingsView 分组标签页', () => {
 
   async function mountSettings() {
     const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
     return wrapper;
   }
@@ -647,7 +647,7 @@ describe('SettingsView 分组标签页', () => {
     await chipOf(wrapper, '通知').trigger('click');
 
     const router = await makeRouter('/settings');
-    const wrapper2 = mount(SettingsView, { global: { plugins: [router] } });
+    const wrapper2 = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
     expect(shown(wrapper2.find('#sec-notify'))).toBe(true);
     expect(shown(wrapper2.find('#sec-appearance'))).toBe(false);

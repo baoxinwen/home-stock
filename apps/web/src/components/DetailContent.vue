@@ -15,6 +15,7 @@ import RestoreChoicePanel from './RestoreChoicePanel.vue';
 import ItemAvatar from './ItemAvatar.vue';
 import { useItemRestore } from '../composables/useItemRestore';
 import { useItemDetail } from '../composables/useItemDetail';
+import { useOverlayA11y } from '../composables/useOverlayA11y';
 import { imageUrl } from '../lib/images';
 
 const props = defineProps<{ itemId: number }>();
@@ -40,6 +41,12 @@ const categoryName = computed(() => {
 const archiveOpen = ref(false);
 const confirmDelete = ref(false);
 const actionError = ref('');
+
+// 评审 A-M1/A-M2：归档/删除确认面板焦点管理（移焦/Escape 逐层/inert 引用计数/关闭还原触发点）
+const archivePanelEl = ref<HTMLElement | null>(null);
+const deletePanelEl = ref<HTMLElement | null>(null);
+useOverlayA11y({ panel: archivePanelEl, close: () => (archiveOpen.value = false), open: archiveOpen });
+useOverlayA11y({ panel: deletePanelEl, close: () => (confirmDelete.value = false), open: confirmDelete });
 
 const statusBadge = computed(() =>
   item.value ? badgeFor(item.value.expiryStatus, item.value.opened) : null,
@@ -294,9 +301,10 @@ async function doDelete(): Promise<void> {
       <button class="btn-danger" type="button" @click="confirmDelete = true">删除</button>
     </div>
 
-    <!-- 归档去向二选一 -->
-    <div v-if="archiveOpen" class="mask" @click.self="archiveOpen = false">
-      <div class="panel" role="dialog" aria-label="选择归档去向">
+    <!-- 归档去向二选一（评审 A-M1：Teleport 到 body——宿主在 #app 页面态时背景 inert 不误伤面板；z 提到 45 高于抽屉） -->
+    <Teleport to="body">
+      <div v-if="archiveOpen" class="mask" @click.self="archiveOpen = false">
+        <div ref="archivePanelEl" class="panel" role="dialog" aria-modal="true" aria-label="选择归档去向" tabindex="-1">
         <h2 class="panel-title">这个物品怎么处理的？</h2>
         <button class="option" type="button" @click="doArchive('used_up')">
           <span class="badge tone-green">用完</span>
@@ -307,20 +315,23 @@ async function doDelete(): Promise<void> {
           <span class="option-hint">过期后扔掉</span>
         </button>
         <button class="link-btn" type="button" @click="archiveOpen = false">取消</button>
-      </div>
-    </div>
-
-    <!-- 删除二次确认 -->
-    <div v-if="confirmDelete" class="mask" @click.self="confirmDelete = false">
-      <div class="panel" role="dialog" aria-label="确认删除">
-        <h2 class="panel-title">确认删除？</h2>
-        <p class="confirm-text">误录入才删除，正常用完请归档。删除后不可恢复。</p>
-        <div class="confirm-actions">
-          <button class="btn-secondary" type="button" @click="confirmDelete = false">取消</button>
-          <button class="btn-danger" type="button" @click="doDelete">仍要删除</button>
         </div>
       </div>
-    </div>
+    </Teleport>
+
+    <!-- 删除二次确认（评审 W-M6：标题带对象名；焦点管理同归档面板） -->
+    <Teleport to="body">
+      <div v-if="confirmDelete" class="mask" @click.self="confirmDelete = false">
+        <div ref="deletePanelEl" class="panel" role="dialog" aria-modal="true" aria-label="确认删除" tabindex="-1">
+          <h2 class="panel-title">删除「{{ item.name }}」？</h2>
+          <p class="confirm-text">误录入才删除，正常用完请归档。删除后不可恢复。</p>
+          <div class="confirm-actions">
+            <button class="btn-secondary" type="button" @click="confirmDelete = false">取消</button>
+            <button class="btn-danger" type="button" @click="doDelete">仍要删除</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- I-4：过期品恢复去向面板（与归档页 D-9 同语义，共享组件） -->
     <RestoreChoicePanel
@@ -462,7 +473,8 @@ async function doDelete(): Promise<void> {
   display: grid;
   place-items: center;
   padding: 16px;
-  z-index: 30;
+  /* Teleport 到 body 后需高于抽屉（z-40）、低于恢复面板（z-50） */
+  z-index: 45;
 }
 .panel {
   background: var(--color-canvas);

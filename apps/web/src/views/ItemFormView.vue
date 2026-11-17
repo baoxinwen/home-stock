@@ -5,6 +5,7 @@ import { api } from '../api';
 import { findItem } from '../api/queries';
 import BackButton from '../components/BackButton.vue';
 import { useItemForm, emptyForm, formFromItem } from '../composables/useItemForm';
+import { useOverlayA11y } from '../composables/useOverlayA11y';
 import { imageUrl } from '../lib/images';
 
 /** 图片上传约束（与 server UPLOAD_MAX_BYTES 对齐，前端预检省一次网络往返） */
@@ -140,6 +141,10 @@ async function submit(): Promise<void> {
     saving.value = false;
   }
 }
+
+// 评审 A-M1/A-M2：「从历史复制」弹层焦点管理（移焦/Escape/inert/关闭还原），Teleport 到 body
+const historyPanelEl = ref<HTMLElement | null>(null);
+useOverlayA11y({ panel: historyPanelEl, close: closeHistory, open: historyOpen });
 
 /** D-12：新建态「保存并再记一笔」——停留表单连续录入，保留类别/单位，清名称与日期类字段 */
 const againNotice = ref('');
@@ -337,9 +342,10 @@ async function submitAndAgain(): Promise<void> {
       </aside>
     </form>
 
-    <!-- 从历史复制 -->
-    <div v-if="historyOpen" class="history-mask" @click.self="closeHistory">
-      <div class="history-panel" role="dialog" aria-label="从历史复制">
+    <!-- 从历史复制（评审 A-M1：Teleport + 焦点管理） -->
+    <Teleport to="body">
+      <div v-if="historyOpen" class="history-mask" @click.self="closeHistory">
+        <div ref="historyPanelEl" class="history-panel" role="dialog" aria-modal="true" aria-label="从历史复制" tabindex="-1">
         <div class="history-head">
           <h2 class="panel-title">从历史复制</h2>
           <button class="link-btn" type="button" @click="closeHistory">关闭</button>
@@ -360,8 +366,9 @@ async function submitAndAgain(): Promise<void> {
             </button>
           </li>
         </ul>
+        </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
