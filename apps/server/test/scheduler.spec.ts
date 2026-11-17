@@ -261,12 +261,16 @@ describe('提醒/测试发送 HTTP API', () => {
     expect(bad.body.code).toBe('VALIDATION_ERROR');
   });
 
-  it('notify-test 不污染通知中心（评审 Important 3：测试消息不写 notifications）', async () => {
+  it('notify-test 真实写一条站内通知（2026-11-16 用户反馈反转 R3：inapp 测试必须可见，否则渠道验证无意义）', async () => {
     const before = await request(app.getHttpServer()).get('/api/notifications');
     await request(app.getHttpServer()).post('/api/settings/notify-test').send({ channel: 'inapp' });
     const after = await request(app.getHttpServer()).get('/api/notifications');
-    expect(after.body.data).toHaveLength(before.body.data.length);
-    expect(after.body.unreadCount).toBe(before.body.unreadCount);
+    // 站内渠道的「送达」就是出现在通知列表：测试消息必须真实写入（未读、收件箱可见）
+    expect(after.body.data).toHaveLength(before.body.data.length + 1);
+    expect(after.body.unreadCount).toBe(before.body.unreadCount + 1);
+    const created = after.body.data[0];
+    expect(created.itemId).toBe(0); // 非物品行：不可点开详情，可「完成」清理
+    expect(created.itemName).toContain('测试');
   });
 
   it('notify-test 写一条 info 级别的 notification_logs 作为可观察证据（评审 R3）', async () => {

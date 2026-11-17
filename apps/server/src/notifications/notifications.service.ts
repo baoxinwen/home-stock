@@ -8,7 +8,7 @@ import type { Db } from '../db';
 import { DB_TOKEN } from '../db/db-token';
 import { notificationLogs, notifications } from '../db/schema';
 import { pruneNotificationLogs, type SqliteLike } from './log-retention';
-import { localTimestamp } from '../reminders/clock';
+import { localDate, localTimestamp } from '../reminders/clock';
 
 type NotificationRow = typeof notifications.$inferSelect;
 type LogRow = typeof notificationLogs.$inferSelect;
@@ -115,5 +115,38 @@ export class NotificationsService {
       .values({ channel, level, message, createdAt: localTimestamp(new Date()) })
       .run();
     pruneNotificationLogs((this.db as unknown as { $client: SqliteLike }).$client);
+  }
+
+  /**
+   * 渠道测试（2026-11-16）：真实写一条站内通知（inapp 渠道的「送达」就是出现在通知列表，
+   * 空操作式假成功对站内渠道没有验证意义）。item_id=0 非物品行：前端 canOpen 判不可点，
+   * 用户可正常「完成」清理。不经 ledger.reserve（测试消息不应被去重吞掉，每次都出现）。
+   */
+  createTestNotification(title: string): void {
+    // 通知表有 (item_id, type, sent_date) 唯一索引——同日第二次测试会撞唯一键 500，
+    // 故先删同键旧行再插（测试消息每次点击都应产生新通知，不参与去重）
+    const sentDate = localDate(new Date());
+    this.db
+      .delete(notifications)
+      .where(
+        and(
+          eq(notifications.itemId, 0),
+          eq(notifications.type, 'expiring_soon'),
+          eq(notifications.sentDate, sentDate),
+        ),
+      )
+      .run();
+    this.db
+      .insert(notifications)
+      .values({
+        itemId: 0,
+        type: 'expiring_soon',
+        sentDate,
+        channels: null,
+        read: 0,
+        createdAt: localTimestamp(new Date()),
+        itemName: title,
+      })
+      .run();
   }
 }

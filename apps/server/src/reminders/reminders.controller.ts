@@ -49,7 +49,12 @@ export class NotifyTestController {
       },
       raw,
     );
-    // 评审 R3：测试发送也留一条可观察证据（info），但不写 notifications 表（不污染通知中心）
+    // 2026-11-16 用户反馈「应用内通知貌似没用」：站内渠道的「送达」就是出现在通知列表，
+    // inapp 测试必须真实落一条站内通知（R3 的「不写表」决策对站内渠道不成立——
+    // email/wecom 测试发真实邮件可见，inapp 不写则永远看不到效果）
+    if (channel === 'inapp' && result.ok) {
+      this.logs.createTestNotification('【家庭库存】测试消息');
+    }
     this.logs.log(
       channel,
       'info',
