@@ -160,7 +160,7 @@ describe('NotificationPopover', () => {
     expect(api.markNotificationsRead).not.toHaveBeenCalled();
   });
 
-  it('空收件箱区分「已全部处理 🎉」与「从没有通知」', async () => {
+  it('空收件箱区分「已全部处理」与「从没有通知」', async () => {
     vi.mocked(api.listNotifications).mockResolvedValue([
       notif({ id: 9, itemId: null, read: 1, done: 1 }),
     ]);

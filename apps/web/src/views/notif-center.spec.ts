@@ -1,6 +1,6 @@
 /**
  * 通知中心测试（三态收件箱，对标 GitHub inbox unread→read→done）：
- * 收件箱/未读/已完成 chips、分组（今天/更早）、行内完成✓/用完/恢复、
+ * 收件箱/未读/已完成 chips、分组（今天/更早）、行内完成/用完/恢复、
  * 点行自动已读（A3）、全部完成（B3）、双空态（B2）、相对时间（B1）、
  * 首字头像（R1）、主操作分级（R2）、已完成去警示（R3）、发送日志折叠。
  */
@@ -232,7 +232,7 @@ describe('NotifCenterView 收件箱三态', () => {
     expect(wrapper.findAll('.notification-item')).toHaveLength(0);
   });
 
-  it('行内「完成 ✓」调 done 端点并移出收件箱；「全部完成」调用无 ids 版本', async () => {
+  it('行内「完成」调 done 端点并移出收件箱；「全部完成」调用无 ids 版本', async () => {
     vi.mocked(api.listNotifications).mockResolvedValue([
       notif({ id: 1, itemId: 1, sentDate: today, read: 0 }),
       notif({ id: 2, itemId: 1, sentDate: today, read: 0 }),
@@ -240,9 +240,9 @@ describe('NotifCenterView 收件箱三态', () => {
     const { wrapper } = await mountView();
     expect(wrapper.findAll('.notification-item')).toHaveLength(2);
 
-    // 单条完成（按钮文本「完成 ✓」）
+    // 单条完成（按钮文本「完成」，对勾为 SVG 不计入 text）
     const actions = wrapper.findAll('.notification-item')[0].findAll('.notif-action');
-    await actions.find((b) => b.text() === '完成 ✓')!.trigger('click');
+    await actions.find((b) => b.text().trim() === '完成')!.trigger('click');
     await flushPromises();
     expect(api.markNotificationsDone).toHaveBeenCalledWith([1]);
     expect(wrapper.findAll('.notification-item')).toHaveLength(1);

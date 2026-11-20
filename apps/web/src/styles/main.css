@@ -503,6 +503,13 @@ h3 {
   font-size: 40px;
   line-height: 1;
 }
+/* unslop 打磨轮：空态 emoji 换线性 SVG（stroke 与控件图标同源），muted 文字角色色 */
+.empty-icon svg {
+  width: 40px;
+  height: 40px;
+  display: block;
+  color: var(--color-muted);
+}
 .empty-title {
   font-size: 15px;
   font-weight: var(--fw-semibold);

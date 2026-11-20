@@ -37,7 +37,7 @@ interface DisplayRow {
 }
 
 const rows = ref<DisplayRow[]>([]);
-/** 是否存在过任意通知（区分「全部处理完 🎉」与「从没有通知」两种空态） */
+/** 是否存在过任意通知（区分「全部处理完」与「从没有通知」两种空态） */
 const hasAny = ref(false);
 
 async function reload(): Promise<void> {
@@ -83,7 +83,7 @@ void reload();
 
 const unreadShown = computed(() => rows.value.filter((n) => !n.read).length);
 
-/** 评审 A-M5：「全部完成」后列表清空仅剩 🎉 提示，SR 需要显式播报 */
+/** 评审 A-M5：「全部完成」后列表清空仅剩空态提示，SR 需要显式播报 */
 const announce = ref('');
 
 /** 天数徽章：已过期红、其余黄（与全页 badgeFor 口径一致）。
@@ -98,6 +98,7 @@ function daysBadge(n: DisplayRow): { text: string; tone: string } {
 
 /** B3 全部完成：done 端点不带 ids = 全部；完成 ⊃ 已读，badge 归零 */
 async function markAll(): Promise<void> {
+  if (markingAll.value) return; // 评审 M-10：aria-disabled 不拦截点击，靠守卫拦重复提交
   markingAll.value = true;
   try {
     await api.markNotificationsDone();
@@ -161,7 +162,7 @@ watch(
           v-if="rows.length > 0"
           class="link-btn"
           type="button"
-          :disabled="markingAll"
+          :aria-disabled="markingAll ? 'true' : undefined"
           @click="markAll"
         >
           全部完成
@@ -171,7 +172,7 @@ watch(
       <div class="notif-pop-list">
         <p v-if="error" class="pop-error" role="alert">{{ error }}</p>
         <p v-else-if="loading && rows.length === 0" class="pop-hint">加载中…</p>
-        <p v-else-if="rows.length === 0" class="pop-hint">{{ hasAny ? '已全部处理 🎉' : '还没有提醒，保持得很好。' }}</p>
+        <p v-else-if="rows.length === 0" class="pop-hint">{{ hasAny ? '已全部处理' : '还没有提醒，保持得很好' }}</p>
         <button
           v-for="n in rows"
           v-else

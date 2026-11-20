@@ -8,6 +8,7 @@
  */
 import { ref } from 'vue';
 import DetailContent from './DetailContent.vue';
+import XIcon from './XIcon.vue';
 import { useOverlayA11y } from '../composables/useOverlayA11y';
 
 const props = defineProps<{ itemId: number }>();
@@ -34,7 +35,7 @@ useOverlayA11y({ panel: panelEl, close: () => emit('close') });
           <header class="drawer-head">
             <h2 class="drawer-title">物品详情</h2>
             <button class="drawer-close" type="button" aria-label="关闭详情" @click="emit('close')">
-              ✕
+              <XIcon />
             </button>
           </header>
           <div class="drawer-body">
@@ -86,6 +87,9 @@ useOverlayA11y({ panel: panelEl, close: () => emit('close') });
 .drawer-close {
   width: 32px;
   height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: var(--color-field);
   border: none;
   border-radius: var(--radius-m);

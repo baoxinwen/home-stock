@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * 通知中心内容（共享）：收件箱三态（对标 GitHub inbox unread→read→done）。
- * - chips：收件箱（未完成）/ 未读 / 已完成；行内操作「完成 ✓」「已用完」「恢复」
+ * - chips：收件箱（未完成）/ 未读 / 已完成；行内操作「完成」（配对勾图标）「已用完」「恢复」
  * - 点行打开物品即自动标已读（A3，fire-and-forget）；全部完成（B3）；相对时间（B1）
  * - 物品点击通过 open-item 事件上抛——页面壳桌面开抽屉/移动跳页，抽屉叠开物品抽屉
  * - 发送日志折叠（铁律 7 Grid）
@@ -10,6 +10,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import type { NotificationDto } from '@home-stock/shared';
 import { api } from '../api';
 import { relativeDate, todayISO } from '../lib/dates';
+import CheckIcon from './CheckIcon.vue';
 
 type InboxFilter = 'inbox' | 'unread' | 'done';
 
@@ -158,7 +159,7 @@ function openItem(n: NotificationDto): void {
   emit('open-item', n.itemId as number);
 }
 
-/** 完成 ✓：done=1（server 同时置已读）→ 移出收件箱 */
+/** 完成：done=1（server 同时置已读）→ 移出收件箱 */
 async function complete(n: NotificationDto): Promise<void> {
   const viewBefore = [...inbox.value];
   try {
@@ -215,6 +216,7 @@ async function quickArchive(n: NotificationDto): Promise<void> {
 
 /** B3 全部完成：done 端点不带 ids = 全部（含已完成列表之外的全部收件箱项） */
 async function completeAll(): Promise<void> {
+  if (completing.value) return; // 评审 M-10：aria-disabled 不拦截点击，靠守卫拦重复提交
   completing.value = true;
   try {
     await api.markNotificationsDone();
@@ -274,7 +276,7 @@ onMounted(() => {
           v-if="filter === 'inbox' && inbox.length > 0"
           class="mark-all"
           type="button"
-          :disabled="completing"
+          :aria-disabled="completing ? 'true' : undefined"
           @click="completeAll"
         >
           全部完成
@@ -285,18 +287,28 @@ onMounted(() => {
     <p v-if="error" class="error-text" role="alert">{{ error }}</p>
     <!-- 评审 A-M5/A-L6：稳定 polite 区（常驻渲染，避免动态插入播报不稳） -->
     <p v-else-if="loading && notifications.length === 0" class="muted-text">加载中…</p>
-    <!-- B2 空态卡片化：无通知 vs 收件箱清空，主副文案两档 -->
+    <!-- B2 空态卡片化：无通知 vs 收件箱清空，主副文案两档；图标为线性 SVG（unslop 打磨轮去 emoji） -->
     <div v-else-if="notifications.length === 0" class="empty-card">
-      <div class="empty-icon" aria-hidden="true">🧺</div>
+      <div class="empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+        </svg>
+      </div>
       <p class="empty-title">还没有提醒</p>
       <p class="empty-sub">添加物品后，临期和过期提醒会出现在这里</p>
     </div>
     <div v-else-if="groups.length === 0 && filter !== 'done'" class="empty-card">
-      <div class="empty-icon" aria-hidden="true">🎉</div>
+      <div class="empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
+      </div>
       <p class="empty-title">已全部处理</p>
       <p class="empty-sub">收件箱已清空，新提醒会出现在这里</p>
     </div>
-    <p v-else-if="groups.length === 0" class="muted-text">没有已完成的记录。</p>
+    <p v-else-if="groups.length === 0" class="muted-text">没有已完成的记录</p>
     <!-- 评审 A-M5/A-L6：稳定 polite 区（常驻渲染，避免动态插入播报不稳） -->
     <p class="sr-only" role="status"><template v-if="actionNotice">{{ actionNotice }}</template></p>
 
@@ -345,7 +357,7 @@ onMounted(() => {
               {{ n.type === 'expired' ? '过期丢弃' : '用完' }}
             </button>
             <!-- R2 主操作 ink 实色 pill -->
-            <button class="notif-action primary" type="button" @click="complete(n)">完成 ✓</button>
+            <button class="notif-action primary" type="button" @click="complete(n)">完成 <CheckIcon /></button>
           </template>
           <button v-else class="notif-action" type="button" @click="restore(n)">恢复</button>
         </li>
