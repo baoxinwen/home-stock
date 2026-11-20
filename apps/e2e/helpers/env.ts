@@ -8,8 +8,8 @@ import { join, resolve } from 'node:path';
 export const E2E_ROOT = resolve(__dirname, '..');
 /** 仓库根目录 */
 export const REPO_ROOT = resolve(E2E_ROOT, '..', '..');
-/** server 运行端口（apps/server/src/main.ts 固定 listen 3000） */
-export const SERVER_PORT = 3000;
+/** server 运行端口（默认 3000，与 main.ts 的 PORT 覆盖联动；宿主占用时可换端口跑） */
+export const SERVER_PORT = Number(process.env.E2E_SERVER_PORT ?? 3000);
 export const BASE_URL = `http://localhost:${SERVER_PORT}`;
 /** 每次运行的数据根目录（其下按 run 分目录；.gitignore 已覆盖） */
 export const E2E_DATA_ROOT = resolve(E2E_ROOT, '.e2e-data');
