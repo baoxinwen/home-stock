@@ -14,6 +14,7 @@ const route = useRoute();
 const router = useRouter();
 
 const token = ref('');
+const tokenInput = ref<HTMLInputElement | null>(null);
 const error = ref('');
 const submitting = ref(false);
 
@@ -27,6 +28,7 @@ async function submit(): Promise<void> {
   const value = token.value.trim();
   if (!value) {
     error.value = '请输入访问口令';
+    tokenInput.value?.focus(); // 评审 M-13：校验失败移焦到口令框（全站 A-M6 模式）
     return;
   }
   submitting.value = true;
@@ -44,6 +46,7 @@ async function submit(): Promise<void> {
         : e instanceof Error
           ? e.message
           : '登录失败，请重试';
+    tokenInput.value?.focus(); // 评审 M-13：验证失败移焦回口令框便于重试
   } finally {
     submitting.value = false;
   }
@@ -62,14 +65,17 @@ async function submit(): Promise<void> {
         <span class="label">访问口令</span>
         <input
           id="access-token"
+          ref="tokenInput"
           v-model="token"
           type="password"
           autocomplete="current-password"
           placeholder="部署时设置的 ACCESS_TOKEN"
+          :aria-invalid="error ? 'true' : undefined"
+          aria-describedby="login-error"
         />
       </label>
 
-      <p v-if="error" class="form-error" role="alert">{{ error }}</p>
+      <p v-if="error" id="login-error" class="form-error" role="alert">{{ error }}</p>
 
       <!-- 评审 A-L3：忙态改 aria-disabled（native disabled 使点击即丢焦点到 body） -->
       <button class="primary-btn" type="submit" :aria-disabled="submitting ? 'true' : undefined">
