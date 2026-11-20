@@ -7,7 +7,7 @@
  * 非 login 路径仍跳登录（对照）。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { api } from './index';
+import { api, SNAPSHOT_AT_KEY } from './index';
 import { setStoredToken } from '../auth/token';
 
 function stub401Fetch(): void {
@@ -50,5 +50,69 @@ describe('api/index.ts onUnauthorized 接线（I-2）', () => {
     await expect(api.listItems()).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
     expect(assign).toHaveBeenCalledTimes(1);
     expect(assign).toHaveBeenCalledWith('/login?redirect=%2Fsettings');
+  });
+});
+
+/**
+ * 快照时间戳记录（离线标识条「数据截至」的数据源）：
+ * 快照接口（items/categories/shopping-items）GET 200 成功 → 写 SNAPSHOT_AT_KEY；
+ * 非快照接口、失败响应、写请求一律不写。
+ */
+describe('api/index.ts 快照时间戳 recordingFetch', () => {
+  function stubOkFetch(dateHeader?: string): void {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(JSON.stringify({ data: [] }), {
+          status: 200,
+          headers: {
+            'content-type': 'application/json',
+            ...(dateHeader ? { date: dateHeader } : {}),
+          },
+        }),
+      ),
+    );
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    setStoredToken('some-token');
+    stubOkFetch();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    localStorage.clear();
+  });
+
+  it('快照接口 GET 200 → 写时间戳', async () => {
+    await api.listItems();
+    expect(localStorage.getItem(SNAPSHOT_AT_KEY)).not.toBeNull();
+  });
+
+  it('响应带 Date 头 → 写服务器生成时刻而非本机当下（评审 I-8：SW 缓存回落保留原始 Date 头）', async () => {
+    const serverDate = 'Mon, 01 Jan 2024 00:00:00 GMT';
+    stubOkFetch(serverDate);
+    await api.listItems();
+    expect(localStorage.getItem(SNAPSHOT_AT_KEY)).toBe(String(Date.parse(serverDate)));
+  });
+
+  it('响应无 Date 头 → 回退本机时间', async () => {
+    await api.listItems();
+    const at = Number(localStorage.getItem(SNAPSHOT_AT_KEY));
+    expect(Number.isFinite(at)).toBe(true);
+    expect(Math.abs(at - Date.now())).toBeLessThan(5000);
+  });
+
+  it('非快照接口不写时间戳', async () => {
+    await api.listNotifications();
+    expect(localStorage.getItem(SNAPSHOT_AT_KEY)).toBeNull();
+  });
+
+  it('写请求（POST /items）不写时间戳', async () => {
+    const dto = { name: 'x' } as unknown as Parameters<typeof api.createItem>[0];
+    await api.createItem(dto);
+    expect(localStorage.getItem(SNAPSHOT_AT_KEY)).toBeNull();
   });
 });

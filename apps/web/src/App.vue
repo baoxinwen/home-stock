@@ -2,6 +2,8 @@
 import { computed } from 'vue';
 import { RouterLink, RouterView, useRoute } from 'vue-router';
 import AppTopNav from './components/AppTopNav.vue';
+import UpdateToast from './components/UpdateToast.vue';
+import OfflineBanner from './components/OfflineBanner.vue';
 import { useMediaQuery } from './composables/useMediaQuery';
 import { shouldShowNav } from './lib/navigation-gate';
 import { useNavBadges } from './composables/useNavBadges';
@@ -59,6 +61,7 @@ function badgeFor(tab: (typeof tabs)[number]): number | null {
     <!-- 评审 A-L2：跳到主内容——桌面 main 前有 7 个导航停靠点 -->
     <a class="skip-link" href="#main">跳到主内容</a>
     <AppTopNav />
+    <OfflineBanner />
     <main id="main" class="topnav-main" tabindex="-1">
       <RouterView />
     </main>
@@ -90,6 +93,7 @@ function badgeFor(tab: (typeof tabs)[number]): number | null {
         </RouterLink>
       </div>
     </header>
+    <OfflineBanner />
     <!-- app-shell 由 div 改 main（评审 A-L2）：移动端此前全站无 main landmark；tabindex=-1 承接路由切换焦点 -->
     <main id="main" class="app-shell" tabindex="-1">
       <RouterView />
@@ -111,4 +115,6 @@ function badgeFor(tab: (typeof tabs)[number]): number | null {
       </div>
     </nav>
   </template>
+  <!-- 新版本提示（PWA prompt 模式）：全局唯一轻 toast，两套壳共用，fixed 定位不占流 -->
+  <UpdateToast />
 </template>
