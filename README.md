@@ -2,6 +2,8 @@
 
 面向家庭、自托管的轻量库存助手：记录食品/药品的购买、保质期与开封状态，临期与过期提醒（企业微信 + 邮件 + 应用内，三态收件箱管理），购物清单转库存（同名自动聚合），浪费/入库/库存健康统计仪表盘，浅色/深色主题。数据只保存在自己的 NAS 上。
 
+- PWA：可安装到主屏；核心清单类接口带离线快照（断网可浏览上次数据，顶栏有离线标识与「数据截至」时间）；新版本采用应用内提示手动刷新（不静默打断操作）
+
 - 技术栈：NestJS 10 + SQLite（better-sqlite3 / Drizzle）+ Vue 3 + Vite PWA
 - 单容器部署（API、前端静态文件、提醒/备份定时任务同进程），避免多进程写 SQLite
 - 访问口令（`ACCESS_TOKEN`）保护所有 API；前端登录一次后记住
@@ -46,6 +48,8 @@ docker compose up -d --build
 
 数据保存在 `./data`，重建容器不会丢失。应用启动时会自动执行数据库迁移。
 
+> PWA 更新提示（v1.3.0 起）：从旧版本升级后需**完全退出一次应用**（关闭全部标签页/PWA 窗口）再打开，新版本的更新提示才会出现；此后常驻标签页会在新版本就绪时收到应用内提示，点「刷新」立即生效，点「忽略」后 24 小时内不再打扰、到期自动重现。
+
 ### 备份数据目录
 
 `./data` 同时包含 `stock.db`、`uploads/`（物品图片）与 `backups/`。除应用内备份外，也可定期用 NAS 快照/rsync 备份整个 `data/` 目录。
@@ -69,6 +73,7 @@ docker compose up -d --build
 | `BACKUP_MAX_BYTES` | 备份目录总大小上限，超过后继续删最旧的一份 | `2147483648`（2 GiB） |
 | `BACKUP_MAX_UPLOAD_BYTES` | 单次上传恢复的体积上限（超过返回 413，不进入恢复流程） | `134217728`（128 MiB） |
 | `PUBLIC_DIR` | 前端静态目录（一般不用改） | `/app/public` |
+| `PORT` | 服务监听端口（compose 场景保持默认即可；本地开发/e2e 换端口用） | `3000` |
 
 通知渠道凭据（SMTP、企业微信 corpid/secret/agentid）**不写在环境变量里**，统一在应用「设置」页配置并保存在数据库中（GET 时脱敏为 `***`）。
 
@@ -177,17 +182,17 @@ pnpm --filter @home-stock/e2e test:e2e
 ```
 
 - 双视口项目：`mobile`（375×667）与 `desktop`（1280×720），共用前置 `setup` 项目的登录态。
-- e2e 固定占用 **3000 端口**且 `reuseExistingServer=false`：端口被占用（如本地 dev server 还开着）会直接报错退出，不会静默复用已有进程——先停掉占用进程再跑。
+- e2e 默认占用 **3000 端口**且 `reuseExistingServer=false`：端口被占用（如本地 dev server 还开着）会直接报错退出，不会静默复用已有进程——先停掉占用进程，或用 `PORT=8300 E2E_SERVER_PORT=8300 pnpm --filter @home-stock/e2e test:e2e` 换端口跑（两端联动覆盖，注意 Windows 部分高位端口在保留段会 EACCES）。
 - 每次运行在 `apps/e2e/.e2e-data/run-*` 下生成全新数据库，截图输出到仓库根 `.superpowers-shots/`。
 
 本地开发（隔离实例：API 3001 + Vite 5173，不占用 e2e 的 3000，也不污染部署数据目录）：
 
 ```bash
-# 终端 1：server（独立数据目录 .dev-data/stock.db，口令必填）
-ACCESS_TOKEN=dev-token-home-stock-2026 DATA_DIR=.dev-data pnpm --filter @home-stock/server build
-ACCESS_TOKEN=dev-token-home-stock-2026 DATA_DIR=.dev-data pnpm --filter @home-stock/server start
+# 终端 1：server（独立数据目录 .dev-data/stock.db，口令必填；PORT 默认 3000，被占可改）
+ACCESS_TOKEN=dev-token-home-stock-2026 DATA_DIR=.dev-data PORT=3001 pnpm --filter @home-stock/server build
+ACCESS_TOKEN=dev-token-home-stock-2026 DATA_DIR=.dev-data PORT=3001 pnpm --filter @home-stock/server start
 
-# 终端 2：web（vite.config.dev.ts 代理 /api 到 3001）
+# 终端 2：web（vite.config.dev.ts 代理 /api 到 3001；该文件为本地临时配置不入库，缺失时按现库文件自建）
 pnpm --filter @home-stock/web exec vite --config vite.config.dev.ts
 ```
 
@@ -206,6 +211,8 @@ pnpm --filter @home-stock/web exec vite --config vite.config.dev.ts
 | 恢复后数据没变 | 确认上传的是本应用的 `.db` 备份；`BACKUP_DIR` 下会留有 `pre-restore-*` 安全备份 |
 | 时区/提醒时刻不对 | 核对 `TZ`，容器内 `date` 应与本地一致 |
 | 磁盘占用增长 | 调小 `BACKUP_KEEP`；清理 `data/backups` 下旧的手工/安全备份 |
+| PWA 更新提示不出现 | SW 仅在 HTTPS 或 localhost 注册——局域网 HTTP 访问没有更新提示属预期；HTTPS 部署下升级后先完全退出一次应用（见 §升级） |
+| 页面显示旧版本/缓存异常 | 「设置 → 备份与恢复 → 离线缓存」一键清除（删缓存并注销 SW 后自动重注册）；多标签页时任一标签确认刷新，其他已提示标签会同步重载 |
 
 ---
 
