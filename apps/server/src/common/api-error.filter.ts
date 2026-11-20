@@ -30,6 +30,11 @@ export class ApiErrorFilter implements ExceptionFilter {
         res.status(404).json({ code: 'NOT_FOUND', message: exception.message });
         return;
       }
+      // 评审 M-2：multer 超限（413）此前落英文 File too large 且码义不符——统一中文文案
+      if (status === HttpStatus.PAYLOAD_TOO_LARGE) {
+        res.status(413).json({ code: 'VALIDATION_ERROR', message: '上传内容超过大小限制' });
+        return;
+      }
       res.status(status).json({ code: 'VALIDATION_ERROR', message: exception.message });
       return;
     }

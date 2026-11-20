@@ -65,11 +65,13 @@ describe('POST /api/uploads', () => {
     expect(status).toBe(400);
   });
 
-  it('超过 2MB → 413（multer 上限）', async () => {
+  it('超过 2MB → 413，统一中文文案与错误码（评审 M-2）', async () => {
     const big = Buffer.concat([Buffer.from(PNG_HEAD), Buffer.alloc(2 * 1024 * 1024)]);
     const res = await auth(request(server()).post('/api/uploads'))
       .attach('file', big, { filename: 'big.png', contentType: 'image/png' });
-    expect([400, 413]).toContain(res.status);
+    expect(res.status).toBe(413);
+    expect(res.body.code).toBe('VALIDATION_ERROR');
+    expect(res.body.message).toBe('上传内容超过大小限制');
   });
 
   it('未鉴权上传 → 401', async () => {
