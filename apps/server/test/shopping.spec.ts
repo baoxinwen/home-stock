@@ -360,10 +360,15 @@ describe('POST /api/shopping-items/:id/convert（M5.2/M5.3）', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.shoppingItem.status).toBe('converted');
 
-    // D-5：转库存即「刚买到」，购买日期 = 当天
+    // D-5：转库存即「刚买到」，购买日期 = 当天。
+    // 期望值用本地日期口径（server 的 localTimestamp 写本地日期；toISOString 是 UTC，
+    // UTC 与本地不同日的时段必撞——2026-11-21 凌晨实测）
+    const now = new Date();
+    const pad = (n: number): string => String(n).padStart(2, '0');
+    const todayLocal = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
     const items = await itemsNamed(name);
     expect(items).toHaveLength(1);
-    expect(items[0].purchaseDate).toBe(new Date().toISOString().slice(0, 10));
+    expect(items[0].purchaseDate).toBe(todayLocal);
 
     const row = (await request(server()).get('/api/shopping-items?status=converted')).body.data as ShoppingItemDto[];
     expect(row.find((s) => s.id === shopping.id)?.status).toBe('converted');
