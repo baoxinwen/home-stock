@@ -441,7 +441,8 @@ describe('SettingsView 备份文件名复制（铁律 10 反馈自熄）', () =>
       await flushPromises();
       expect(writeText).toHaveBeenCalledWith('stock-20261108-020000.db');
       expect(wrapper.find('.copy-btn').classes()).toContain('copied');
-      expect(wrapper.find('.copy-btn').text()).toBe('✓');
+      // 对勾为 SVG 图标（unslop 打磨轮去字符图形），text 为空、svg 存在
+      expect(wrapper.find('.copy-btn svg').exists()).toBe(true);
 
       // 2.5s 自熄
       vi.advanceTimersByTime(2600);
@@ -463,6 +464,76 @@ describe('SettingsView 备份文件名复制（铁律 10 反馈自熄）', () =>
     await flushPromises();
     expect(wrapper.find('.copy-btn').classes()).not.toContain('copied');
     expect(wrapper.find('.copy-btn').text()).toBe('复制');
+  });
+
+  it('剪贴板不可用（HTTP 非安全上下文）→ 行内错误提示，不再静默（评审 I-7）', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
+      configurable: true,
+    });
+    const wrapper = await mountWithBackups();
+    await wrapper.find('.copy-btn').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('.backup-error').exists()).toBe(true);
+    expect(wrapper.find('.backup-error').text()).toContain('复制失败');
+    expect(wrapper.find('.copy-btn').classes()).not.toContain('copied');
+  });
+});
+
+describe('SettingsView 离线缓存块（PWA 运维兜底）', () => {
+  async function mountOnBackupTab() {
+    vi.mocked(api.getSettings).mockResolvedValue(makeSettings());
+    vi.mocked(api.listBackups).mockResolvedValue([]);
+    const router = await makeRouter('/settings');
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
+    await flushPromises();
+    const chip = wrapper.findAll('.tab-chip').find((c) => c.text() === '备份与恢复')!;
+    await chip.trigger('click');
+    await flushPromises();
+    return wrapper;
+  }
+
+  it('备份 tab 显示离线能力状态与版本号', async () => {
+    // happy-dom 无 navigator.serviceWorker——补桩走「可离线使用」正向分支
+    Object.defineProperty(navigator, 'serviceWorker', { value: {}, configurable: true });
+    const wrapper = await mountOnBackupTab();
+    const text = wrapper.text();
+    expect(text).toContain('离线缓存');
+    expect(text).toContain('可离线使用');
+    expect(text).toMatch(/版本 \d+\.\d+\.\d+/);
+    wrapper.unmount();
+  });
+
+  it('清除离线缓存：二次确认后删 caches、注销 SW 并刷新', async () => {
+    const keys = vi.fn(async () => ['workbox-precache', 'home-stock-snapshot']);
+    const del = vi.fn(async () => undefined);
+    Object.defineProperty(window, 'caches', { value: { keys, delete: del }, configurable: true });
+    const unregister = vi.fn(async () => true);
+    Object.defineProperty(navigator, 'serviceWorker', {
+      value: { getRegistrations: vi.fn(async () => [{ unregister }]) },
+      configurable: true,
+    });
+    const reload = vi.spyOn(window.location, 'reload').mockImplementation(() => {});
+    try {
+      const wrapper = await mountOnBackupTab();
+      const btn = wrapper.find('.offline-clear');
+
+      // 首击只切确认态，不动缓存
+      await btn.trigger('click');
+      expect(btn.text()).toContain('确认清除');
+      expect(keys).not.toHaveBeenCalled();
+
+      // 再击执行：删 caches → 注销 SW → reload
+      await btn.trigger('click');
+      await flushPromises();
+      expect(keys).toHaveBeenCalledTimes(1);
+      expect(del).toHaveBeenCalledTimes(2);
+      expect(unregister).toHaveBeenCalledTimes(1);
+      expect(reload).toHaveBeenCalledTimes(1);
+      wrapper.unmount();
+    } finally {
+      reload.mockRestore();
+    }
   });
 });
 

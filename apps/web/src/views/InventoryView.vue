@@ -206,7 +206,7 @@ function openDetail(item: ItemDto): void {
   }
 }
 
-/** 抽屉关闭（Esc/遮罩/✕） */
+/** 抽屉关闭（Esc/遮罩/关闭钮） */
 function closeDrawer(): void {
   drawerItemId.value = null;
 }
@@ -247,7 +247,7 @@ async function stepQuantity(item: ItemDto, delta: number): Promise<void> {
     const replace = (list: ItemDto[]): ItemDto[] => list.map((it) => (it.id === updated.id ? updated : it));
     items.value = replace(items.value);
     allItems.value = replace(allItems.value);
-    void loadOverview();
+    // 评审 M-7：概览数字由 allItems 派生，replace 已覆盖；此处再全量拉取纯属冗余且会制造陈旧快照覆盖竞态
   } catch (e) {
     error.value = e instanceof Error ? e.message : '数量更新失败';
   } finally {
@@ -368,14 +368,25 @@ onMounted(() => {
 
     <p v-if="error" class="error-text" role="alert">{{ error }}</p>
     <p v-else-if="loading && items.length === 0" class="muted-text">加载中…</p>
-    <!-- 细节轮 D-5：空态卡片化（与清单/通知同语言，样式已全局化 main.css） -->
+    <!-- 细节轮 D-5：空态卡片化（与清单/通知同语言，样式已全局化 main.css）；图标为线性 SVG（unslop 打磨轮去 emoji） -->
     <div v-else-if="items.length === 0" class="empty-card">
-      <div class="empty-icon" aria-hidden="true">📦</div>
+      <div class="empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+          <path d="m3.3 7 8.7 5 8.7-5" />
+          <path d="M12 22V12" />
+        </svg>
+      </div>
       <p class="empty-title">还没有物品</p>
       <p class="empty-sub">{{ isDesktop ? '点右上角「＋ 记一笔」开始' : '点右下角「记一笔」开始' }}</p>
     </div>
     <div v-else-if="displayed.length === 0" class="empty-card">
-      <div class="empty-icon" aria-hidden="true">🔍</div>
+      <div class="empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.3-4.3" />
+        </svg>
+      </div>
       <p class="empty-title">没有符合筛选条件的物品</p>
       <p class="empty-sub">换个状态或类别筛选试试</p>
     </div>
@@ -383,7 +394,7 @@ onMounted(() => {
     <!-- PC：表格化宽行 -->
     <div v-else-if="isDesktop" class="inv-table" role="list" aria-label="库存列表">
       <!-- 评审 A-M4：列名保留在无障碍树作行内容阅读参照（此前 aria-hidden 主动移除） -->
-      <div class="inv-thead">
+      <div class="inv-thead" role="presentation">
         <span>物品</span>
         <span>类别</span>
         <span>数量</span>

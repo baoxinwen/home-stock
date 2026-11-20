@@ -4,7 +4,7 @@
  * 宿主：ItemDetailView（移动端与直链全页）与 ItemDrawer（桌面抽屉）。
  * 数据自包含：按 itemId 加载物品/类别/关联通知；变更通过 emit 通知宿主刷新。
  */
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import type { ArchiveReason, CategoryDto, ItemDto, NotificationDto } from '@home-stock/shared';
 import { archiveBadgeFor, badgeFor } from '../lib/badges';
@@ -177,6 +177,10 @@ const { restoringId, postponeAndRestore, forceRestore } = useItemRestore({
     restoreChoice.value = null;
     await load();
     emit('changed');
+    // 评审 I-9：焦点在面板 deactivate 时已还原到恢复按钮，但恢复后详情翻转为在库视图、
+    // 该按钮随分支切换卸载会掉到 body——刷新完成后主动落到在库视图的编辑钮
+    await nextTick();
+    document.querySelector<HTMLElement>('.detail-card .btn-primary')?.focus();
   },
   onError: (message) => {
     actionError.value = message;

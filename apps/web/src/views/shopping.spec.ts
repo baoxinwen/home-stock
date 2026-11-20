@@ -330,6 +330,24 @@ describe('ShoppingView 增删改与转库存', () => {
     expect(api.listShoppingItems).toHaveBeenCalledTimes(2);
   });
 
+  it('数量清空后失焦 → 输入框回弹为当前值，不静默停留无效显示（评审 I-10）', async () => {
+    vi.mocked(api.listShoppingItems).mockResolvedValue([
+      makeShopping({ id: 11, name: '牛奶', status: 'pending', quantity: 2, unit: '盒' }),
+    ]);
+    const router = await makeRouter('/list');
+    const wrapper = mount(ShoppingView, { global: { plugins: [router] } });
+    await flushPromises();
+
+    const qty = wrapper.find('.shopping-item .qty-edit');
+    await qty.setValue('');
+    await qty.trigger('change');
+    await flushPromises();
+
+    // 无效值回落原数量：输入框必须回弹显示 2（与提交失败路径对称），不发请求
+    expect((qty.element as HTMLInputElement).value).toBe('2');
+    expect(api.updateShoppingItem).not.toHaveBeenCalled();
+  });
+
   it('勾选 pending → status=done；已完成改回 pending', async () => {
     vi.mocked(api.listShoppingItems).mockResolvedValueOnce([
       makeShopping({ id: 5, name: '待购项', status: 'pending' }),

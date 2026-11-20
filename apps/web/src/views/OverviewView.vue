@@ -258,7 +258,7 @@ onMounted(load);
             <RouterLink class="panel-link" to="/inventory">全部库存 →</RouterLink>
           </h2>
           <p v-if="active.length === 0" class="panel-empty">
-            还没有物品，<RouterLink to="/items/new">记一笔</RouterLink>开始。
+            还没有物品，<RouterLink to="/items/new">记一笔</RouterLink>开始
           </p>
           <div v-for="g in visibleDetailGroups" :key="g.key" class="ov-group">
             <div class="ov-group-head">

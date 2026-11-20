@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import { overdueDays as sharedOverdueDays, type ItemDto } from '@home-stock/shared';
 import { api } from '../api';
 import { archiveBadgeFor } from '../lib/badges';
@@ -73,6 +73,10 @@ const { restoringId, postponeAndRestore, forceRestore } = useItemRestore({
   onDone: async () => {
     restoreChoice.value = null;
     await load();
+    // 评审 I-9：焦点在面板 deactivate 时已还原到恢复按钮，但随后的重拉把该行移除、
+    // 焦点元素随之卸载会掉到 body——重拉完成后主动落到稳定锚点（返回钮）
+    await nextTick();
+    document.querySelector<HTMLElement>('.archive-view .back-btn')?.focus();
   },
   onError: (message) => {
     error.value = message;
@@ -180,8 +184,8 @@ onMounted(load);
 
     <p v-if="error" class="error-text" role="alert">{{ error }}</p>
     <p v-else-if="loading && items.length === 0" class="muted-text">加载中…</p>
-    <p v-else-if="items.length === 0" class="muted-text">还没有归档记录。</p>
-    <p v-else-if="displayed.length === 0" class="muted-text">没有符合筛选条件的归档记录。</p>
+    <p v-else-if="items.length === 0" class="muted-text">还没有归档记录</p>
+    <p v-else-if="displayed.length === 0" class="muted-text">没有符合筛选条件的归档记录</p>
 
     <!-- 审查 A-1：按月分组表格式密行（class 名沿用 archive-card 兼容既有断言） -->
     <section v-for="(g, gi) in monthGroups" :key="g.month" class="arc-group">
@@ -190,7 +194,7 @@ onMounted(load);
       </h2>
       <div class="arc-table" role="list" :aria-label="`${g.label}归档记录`">
         <!-- 评审 A-M4：列名保留在无障碍树 -->
-        <div class="arc-thead">
+        <div class="arc-thead" role="presentation">
           <span>物品</span>
           <span>原因</span>
           <span class="arc-h-val">金额</span>

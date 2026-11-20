@@ -410,7 +410,7 @@ async function submitAndAgain(): Promise<void> {
           :value="historyQuery"
           @input="onHistorySearch(($event.target as HTMLInputElement).value)"
         />
-        <p v-if="history.length === 0" class="muted-text">没有匹配的历史记录。</p>
+        <p v-if="history.length === 0" class="muted-text">没有匹配的历史记录</p>
         <ul class="history-list">
           <li v-for="h in history" :key="h.id">
             <button class="history-item" type="button" @click="applyHistory(h)">

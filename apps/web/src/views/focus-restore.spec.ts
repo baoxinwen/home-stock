@@ -19,6 +19,8 @@ vi.mock('../api', () => ({
     archiveItem: vi.fn(async () => ({})),
     listShoppingItems: vi.fn(async () => []),
     updateShoppingItem: vi.fn(async () => ({})),
+    updateItem: vi.fn(async () => ({})),
+    restoreItem: vi.fn(async () => ({})),
   },
 }));
 
@@ -27,6 +29,7 @@ import { router } from '../router';
 import NotificationContent from '../components/NotificationContent.vue';
 import NotificationPopover from '../components/NotificationPopover.vue';
 import ShoppingView from './ShoppingView.vue';
+import ArchiveView from './ArchiveView.vue';
 import type { ItemDto } from '@home-stock/shared';
 
 function notif(patch: Partial<NotificationDto>): NotificationDto {
@@ -84,7 +87,7 @@ function shopping(patch: Partial<ShoppingItemDto>): ShoppingItemDto {
 }
 
 describe('行移除后焦点还原（A-M2 余量）', () => {
-  it('通知行点「完成 ✓」：焦点落到相邻行的主体按钮，不丢 body', async () => {
+  it('通知行点「完成」：焦点落到相邻行的主体按钮，不丢 body', async () => {
     vi.mocked(api.listNotifications).mockResolvedValue([
       notif({ id: 1, itemName: '酸奶', itemId: 9 }),
       notif({ id: 2, itemName: '面包', itemId: 10 }),
@@ -135,6 +138,46 @@ describe('行移除后焦点还原（A-M2 余量）', () => {
     expect(active.classList.contains('toggle')).toBe(true);
     // 相邻行（垃圾袋）的勾选钮
     expect(active.closest('.shopping-item')?.textContent).toContain('垃圾袋');
+    wrapper.unmount();
+  });
+});
+
+describe('归档过期品恢复后焦点不丢（评审 I-9）', () => {
+  it('恢复完成列表重拉移除该行后，焦点落在稳定锚点而非 body', async () => {
+    const archived = makeItem({
+      id: 21,
+      name: '过期酸奶',
+      status: 'archived',
+      expiryDate: '2020-01-01',
+      effectiveExpiryDate: '2020-01-01',
+      archivedReason: 'expired_discarded',
+      archivedAt: '2026-11-10T08:00:00',
+    });
+    // 首次载入含该行；恢复后重拉为空（行被移除）
+    vi.mocked(api.listItems).mockResolvedValueOnce([archived]).mockResolvedValueOnce([]);
+    vi.mocked(api.updateItem).mockResolvedValue({ id: 21 } as ItemDto);
+    vi.mocked(api.restoreItem).mockResolvedValue({ id: 21 } as ItemDto);
+
+    const wrapper = mount(ArchiveView, {
+      global: { plugins: [router], stubs: { teleport: true } },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    const restoreBtn = wrapper.find('.btn-restore');
+    expect(restoreBtn.exists()).toBe(true);
+    (restoreBtn.element as HTMLElement).focus();
+    await restoreBtn.trigger('click');
+    await flushPromises();
+
+    const option = wrapper.find('.rcp-option');
+    expect(option.exists()).toBe(true);
+    await option.trigger('click');
+    await flushPromises();
+
+    // 面板已关、行已随重拉移除：焦点必须仍落在文档内可见元素上（不落 body）
+    expect(wrapper.find('.rcp-mask').exists()).toBe(false);
+    expect(document.activeElement).not.toBe(document.body);
     wrapper.unmount();
   });
 });

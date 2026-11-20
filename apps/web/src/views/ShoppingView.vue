@@ -9,6 +9,8 @@ import { useRouter } from 'vue-router';
 import type { CategoryDto, ItemDto, ShoppingItemDto } from '@home-stock/shared';
 import { api } from '../api';
 import ChevronIcon from '../components/ChevronIcon.vue';
+import CheckIcon from '../components/CheckIcon.vue';
+import CircleIcon from '../components/CircleIcon.vue';
 import { formatAmount } from '../lib/stats';
 
 const router = useRouter();
@@ -191,12 +193,16 @@ function toggle(item: ShoppingItemDto): void {
   });
 }
 
-/** M5.1 修改数量：失焦/回车提交，非法值回落原数量；提交失败把输入框回弹为当前值（M16） */
+/** M5.1 修改数量：失焦/回车提交，非法值回落原数量并回弹输入框（评审 I-10：与提交失败路径对称）；提交失败同样回弹（M16） */
 function updateQuantity(item: ShoppingItemDto, event: Event): void {
   const input = event.target as HTMLInputElement;
   const raw = Number(input.value);
   const quantity = Number.isFinite(raw) && raw > 0 ? raw : item.quantity;
-  if (quantity === item.quantity) return;
+  if (quantity === item.quantity) {
+    // 无效值回落：数据未变则 props diff 不写 DOM，输入框会停留空/0 的无效显示——显式回弹
+    input.value = String(item.quantity);
+    return;
+  }
   void run(() => api.updateShoppingItem(item.id, { quantity })).then((ok) => {
     if (!ok) input.value = String(item.quantity);
   });
@@ -246,11 +252,22 @@ function remove(item: ShoppingItemDto): void {
   void run(() => api.deleteShoppingItem(item.id));
 }
 
+let confirmClearTimer: ReturnType<typeof setTimeout> | null = null;
+
 function clearConverted(): void {
-  // 二次确认：第一次点击只切换为确认态
+  // 二次确认：首击切换确认态，3s 无操作自动复位（评审 M-16：对齐设置页同语言，误触窗口不无限期存活）
   if (!confirmingClear.value) {
     confirmingClear.value = true;
+    if (confirmClearTimer) clearTimeout(confirmClearTimer);
+    confirmClearTimer = setTimeout(() => {
+      confirmingClear.value = false;
+      confirmClearTimer = null;
+    }, 3000);
     return;
+  }
+  if (confirmClearTimer) {
+    clearTimeout(confirmClearTimer);
+    confirmClearTimer = null;
   }
   void run(() => api.clearConvertedShoppingItems(), '已清空全部已转换项');
 }
@@ -276,46 +293,64 @@ onMounted(async () => {
       </span>
     </header>
 
-    <!-- 体检表 P0-2：PC 单行网格（名称1fr/数量64/单位88/单价112/类别150/添加auto），窄屏回落两行 -->
+    <!-- 体检表 P0-2：PC 单行网格（名称1fr/数量64/单位88/单价112/类别150/添加auto），窄屏回落两行。
+         用户反馈（2026-11-19）：裸输入框靠 placeholder 撑语义不够（数量框有默认值 1 时无任何提示，
+         移动端更模糊）——每格上方加 12px muted 小标签：桌面端对齐成表头行，移动端逐框标注 -->
     <form class="add-form" @submit.prevent="add">
-      <input
-        id="shopping-name"
-        v-model="name"
-        class="add-name"
-        type="text"
-        placeholder="要买什么？"
-        aria-label="物品名称"
-        maxlength="100"
-        :aria-invalid="invalidField === 'name' ? 'true' : undefined"
-        :aria-describedby="invalidField === 'name' ? 'shopping-error' : undefined"
-      />
-      <input
-        v-model.number="quantity"
-        class="add-quantity"
-        type="number"
-        min="1"
-        step="1"
-        aria-label="数量"
-        placeholder="如 2"
-      />
-      <!-- 审查 L-1：placeholder 收短防 66px/112px 列截断（可选语义保留在 aria-label） -->
-      <input v-model="unit" class="add-unit" type="text" aria-label="单位（可选）" placeholder="如 盒" />
-      <input
-        id="shopping-price"
-        v-model.number="price"
-        class="add-price"
-        type="number"
-        min="0"
-        step="0.01"
-        aria-label="单价（选填，元）"
-        placeholder="选填"
-        :aria-invalid="invalidField === 'price' ? 'true' : undefined"
-        :aria-describedby="invalidField === 'price' ? 'shopping-error' : undefined"
-      />
-      <select v-model="categoryId" class="add-category" aria-label="类别">
-        <option value="">不选类别</option>
-        <option v-for="c in categories" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
-      </select>
+      <div class="add-cell area-name">
+        <label class="add-cell-label" for="shopping-name">名称</label>
+        <input
+          id="shopping-name"
+          v-model="name"
+          class="add-name"
+          type="text"
+          placeholder="要买什么？"
+          aria-label="物品名称"
+          maxlength="100"
+          :aria-invalid="invalidField === 'name' ? 'true' : undefined"
+          :aria-describedby="invalidField === 'name' ? 'shopping-error' : undefined"
+        />
+      </div>
+      <div class="add-cell area-qty">
+        <label class="add-cell-label" for="shopping-quantity">数量</label>
+        <input
+          id="shopping-quantity"
+          v-model.number="quantity"
+          class="add-quantity"
+          type="number"
+          min="1"
+          step="1"
+          aria-label="数量"
+          placeholder="如 2"
+        />
+      </div>
+      <div class="add-cell area-unit">
+        <label class="add-cell-label" for="shopping-unit">单位</label>
+        <!-- 审查 L-1：placeholder 收短防 66px/112px 列截断（可选语义保留在 aria-label） -->
+        <input id="shopping-unit" v-model="unit" class="add-unit" type="text" aria-label="单位（可选）" placeholder="如 盒" />
+      </div>
+      <div class="add-cell area-price">
+        <label class="add-cell-label" for="shopping-price">单价</label>
+        <input
+          id="shopping-price"
+          v-model.number="price"
+          class="add-price"
+          type="number"
+          min="0"
+          step="0.01"
+          aria-label="单价（选填，元）"
+          placeholder="选填"
+          :aria-invalid="invalidField === 'price' ? 'true' : undefined"
+          :aria-describedby="invalidField === 'price' ? 'shopping-error' : undefined"
+        />
+      </div>
+      <div class="add-cell area-cat">
+        <label class="add-cell-label" for="shopping-category">类别</label>
+        <select id="shopping-category" v-model="categoryId" class="add-category" aria-label="类别">
+          <option value="">不选类别</option>
+          <option v-for="c in categories" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
+        </select>
+      </div>
       <!-- 评审 A-L3：忙态改 aria-disabled 保留可聚焦（守卫在 handler 首行） -->
       <button class="add-submit" type="submit" :aria-disabled="adding ? 'true' : undefined">添加</button>
     </form>
@@ -335,7 +370,7 @@ onMounted(async () => {
       <ul class="shopping-list">
         <li v-for="item in pendingItems" :key="item.id" class="shopping-item pending">
           <button class="toggle" type="button" title="标记为已完成" :aria-label="`勾选完成 ${item.name}`" @click="toggle(item)">
-            ○
+            <CircleIcon />
           </button>
           <span class="item-name">{{ item.name }}</span>
           <span class="item-meta">
@@ -398,7 +433,7 @@ onMounted(async () => {
         <ul class="shopping-list">
         <li v-for="item in doneItems" :key="item.id" class="shopping-item done">
           <button class="toggle" type="button" :aria-label="`改回待购 ${item.name}`" @click="toggle(item)">
-            ✓
+            <CheckIcon />
           </button>
           <span class="item-name">{{ item.name }}</span>
           <span class="item-meta">
@@ -458,23 +493,31 @@ onMounted(async () => {
     'qty unit price'
     'cat cat add';
 }
-.add-name {
+/* 用户反馈（2026-11-19）：每格上方 12px muted 小标签——桌面端对齐成表头行，移动端逐框标注 */
+.add-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.add-cell.area-name {
   grid-area: name;
 }
-.add-quantity {
+.add-cell.area-qty {
   grid-area: qty;
 }
-.add-unit {
+.add-cell.area-unit {
   grid-area: unit;
 }
-.add-price {
+.add-cell.area-price {
   grid-area: price;
 }
-.add-category {
+.add-cell.area-cat {
   grid-area: cat;
 }
-.add-submit {
-  grid-area: add;
+.add-cell-label {
+  font-size: 12px;
+  color: var(--color-muted);
 }
 .add-name,
 .add-quantity,
@@ -490,6 +533,8 @@ onMounted(async () => {
   background: var(--color-field); /* 与卡片 surface 分层（体检表 P0-2 连带修正：此前与卡片同色糊成一片） */
 }
 .add-submit {
+  grid-area: add;
+  align-self: end; /* 无标签格：底边与各格输入框对齐 */
   background: var(--color-ink);
   color: var(--color-on-ink);
   border-radius: var(--radius-s);
@@ -548,6 +593,9 @@ onMounted(async () => {
   flex: none;
   width: 26px;
   height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
   background: var(--color-field);
   color: var(--color-muted);

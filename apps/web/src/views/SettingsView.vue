@@ -12,6 +12,7 @@ import { api } from '../api';
 import { clearStoredToken } from '../auth/token';
 import BackButton from '../components/BackButton.vue';
 import ChevronIcon from '../components/ChevronIcon.vue';
+import CheckIcon from '../components/CheckIcon.vue';
 import { useTheme, type ThemePreference } from '../composables/useTheme';
 import { useOverlayA11y } from '../composables/useOverlayA11y';
 
@@ -112,8 +113,42 @@ async function copyBackupName(name: string): Promise<void> {
       copiedTimer = null;
     }, 2500);
   } catch {
-    // 剪贴板不可用（权限/非安全上下文）：不显示成功反馈
+    // 评审 I-7：剪贴板不可用（权限/非安全上下文——局域网 HTTP 部署常走）必须给出反馈，
+    // 复用下载失败的行内提示位，不再静默让用户以为按钮坏了
+    backupError.value = '复制失败：当前环境不支持剪贴板访问';
   }
+}
+
+// 离线缓存（PWA 运维兜底，reno 同款思路）：状态/版本展示 + 一键清空（caches 全删 + SW 注销 + 刷新重注册）
+/** SW 只在安全上下文（HTTPS/localhost）注册——局域网 HTTP 访问时如实显示不可用 */
+const swAvailable = 'serviceWorker' in navigator;
+const appVersion = __APP_VERSION__;
+const clearOfflineConfirming = ref(false);
+let clearOfflineTimer: ReturnType<typeof setTimeout> | null = null;
+
+async function clearOfflineCache(): Promise<void> {
+  // 二次确认：首击切换确认文案，3s 无操作自动复位（与清单「清空已转换」同语言）
+  if (!clearOfflineConfirming.value) {
+    clearOfflineConfirming.value = true;
+    clearOfflineTimer = setTimeout(() => {
+      clearOfflineConfirming.value = false;
+      clearOfflineTimer = null;
+    }, 3000);
+    return;
+  }
+  if (clearOfflineTimer) clearTimeout(clearOfflineTimer);
+  clearOfflineConfirming.value = false;
+  try {
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+    const regs = (await navigator.serviceWorker?.getRegistrations?.()) ?? [];
+    await Promise.all(regs.map((r) => r.unregister()));
+  } catch {
+    // 注销失败也照样刷新，交给注册路径自愈
+  }
+  window.location.reload();
 }
 
 // ---------- 数据概览（PC 充实化）：物品/类别/备份状态，与表单加载解耦 ----------
@@ -755,7 +790,7 @@ onMounted(() => {
             :aria-expanded="logsOpen"
             @click="logsOpen = !logsOpen"
           >
-            发送日志（{{ logs.length }}）
+            发送日志（共 {{ logs.length }} 条，展示最近 8 条）
             <ChevronIcon :rotate="logsOpen ? 90 : 0" />
           </button>
           <div class="logs-collapse" :class="{ open: logsOpen }">
@@ -778,7 +813,7 @@ onMounted(() => {
         <div class="backup-block">
           <div class="block-info">
             <h3 class="block-title">创建备份</h3>
-            <p class="muted-text">下载当前数据库的完整快照（SQLite 单文件）。</p>
+            <p class="muted-text">把全部数据打包为单个 SQLite 文件，下载到本机。</p>
           </div>
           <div class="block-main">
             <button
@@ -794,7 +829,12 @@ onMounted(() => {
         <div class="backup-block">
           <div class="block-info">
             <h3 class="block-title">从备份恢复</h3>
-            <p class="muted-text">恢复会用所选文件覆盖当前全部数据，操作前自动生成安全备份。</p>
+            <p class="muted-text">用备份文件覆盖当前数据，操作前自动留存安全备份。</p>
+            <!-- 反馈状态行（下载/恢复共用，A-M5 稳定 polite 区常驻渲染空态零占位）：
+                 放左栏文案尾部而非两块之间——card 是 gap 10px 的 grid，空 p 夹在中间会被
+                 上下各收一次 gap 成 20px 双倍间隔 -->
+            <p v-if="backupError" class="backup-error form-error" role="alert">{{ backupError }}</p>
+            <p v-else class="backup-ok form-ok" role="status"><template v-if="backupOk">{{ backupOk }}</template></p>
           </div>
           <div class="block-main">
             <!-- 用户反馈（2026-11-11）：自定义按钮与原生「选择文件」按钮重复——
@@ -817,12 +857,10 @@ onMounted(() => {
             </button>
           </div>
         </div>
-        <p v-if="backupError" class="backup-error form-error" role="alert">{{ backupError }}</p>
-        <p v-else class="backup-ok form-ok" role="status"><template v-if="backupOk">{{ backupOk }}</template></p>
         <div class="backup-block backup-list-wrap">
           <div class="block-info">
             <h3 class="block-title">备份文件</h3>
-            <p class="muted-text">保留在服务器备份目录中，可随时用于恢复。</p>
+            <p class="muted-text">服务器上保留的历史备份，可随时用于恢复。</p>
           </div>
           <div class="block-main">
             <p v-if="!backups.length" class="muted-text">尚未创建备份；点上方「备份下载」生成第一份快照。</p>
@@ -838,11 +876,32 @@ onMounted(() => {
                   @click="copyBackupName(b.name)"
                 >
                   <!-- 铁律 10 反馈自熄：复制成功对勾 2.5s 后自动淡出恢复 -->
-                  <span v-if="copiedName === b.name" class="copy-done">✓</span>
+                  <span v-if="copiedName === b.name" class="copy-done"><CheckIcon /></span>
                   <span v-else>复制</span>
                 </button>
               </li>
             </ul>
+          </div>
+        </div>
+
+        <!-- 离线缓存（PWA 运维兜底）：大厂告知法——正向能力陈述 + 状态点，版本安静 meta；
+             不暴露实现机制（界面红线：只说后果）。清空走二次确认并整页刷新重注册 -->
+        <div class="backup-block">
+          <div class="block-info">
+            <h3 class="block-title">离线缓存</h3>
+            <p class="muted-text">断网时可查看库存与清单，联网后自动更新。</p>
+          </div>
+          <div class="block-main">
+            <p class="offline-meta">
+              <span class="offline-status">
+                <span class="offline-dot" :class="{ 'offline-dot-off': !swAvailable }" aria-hidden="true" />
+                {{ swAvailable ? '可离线使用' : '此地址暂不支持离线' }}
+              </span>
+              <span class="num">版本 {{ appVersion }}</span>
+            </p>
+            <button class="ghost-btn danger offline-clear" type="button" @click="clearOfflineCache">
+              {{ clearOfflineConfirming ? '确认清除（将刷新页面）' : '清除离线缓存' }}
+            </button>
           </div>
         </div>
       </section>
@@ -1078,10 +1137,12 @@ onMounted(() => {
   font-size: 14px;
   padding: 8px 0;
 }
-/* 评审 A-L6：稳定区空态零占位 */
+/* 评审 A-L6：稳定区空态零占位（padding 与 p 默认 margin 一并清零，
+   否则空态仍占一行高——备份 tab 恢复块与文件列表间的大空隙根因） */
 .form-ok:empty,
 .test-result:empty {
   padding: 0;
+  margin: 0;
 }
 .test-result {
   font-size: 13px;
@@ -1471,12 +1532,13 @@ onMounted(() => {
 /* 铁律 10 复制反馈自熄：对勾淡出恢复 */
 .copy-btn {
   flex: none;
+  align-self: flex-start; /* backup-item 纵向 flex 默认 stretch 会把按钮拉满整行 */
   border: none;
   background: var(--color-field);
-  border-radius: var(--radius-s);
-  padding: 3px 9px;
-  font-size: 12px;
-  color: var(--color-muted);
+  border-radius: var(--radius-m);
+  padding: 8px 14px; /* 与本 tab 其他 ghost-btn 同规格（此前 12px 小字独一份，视觉不统一） */
+  font-size: 13px;
+  color: var(--color-text);
   cursor: pointer;
   transition: background 150ms ease-out, color 150ms ease-out;
 }
@@ -1491,6 +1553,29 @@ onMounted(() => {
 .copy-done {
   display: inline-block;
   animation: copy-fade-in 160ms cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+/* 离线缓存块 meta：状态点（可离线使用=绿点 / 不支持=灰点）+ 安静版本号 */
+.offline-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+.offline-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.offline-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tone-green-fg);
+}
+.offline-dot-off {
+  background: var(--color-muted);
 }
 /* 对勾在 2.5s 定时器触发前 400ms 开始淡出，恢复为"复制" */
 .copy-btn.copied .copy-done {
@@ -1639,16 +1724,21 @@ onMounted(() => {
   flex: 0 1 560px;
   margin-left: var(--space-3);
 }
-/* 输入框栅格对齐：label 定宽列，控件起点统一——左缘右缘双对齐，消除长短锯齿 */
+/* 输入框栅格对齐：label 定宽列，控件起点统一——左缘右缘双对齐，消除长短锯齿。
+   164px 容纳最长标签「全局默认提醒阈值（天）」（11 全角 ≈154px），不再折行 */
 .settings-form .field:not(.switch):not(.theme-field) .label {
-  flex: 0 0 150px;
+  flex: 0 0 164px;
 }
 /* A4 开关行并入栅格：toggle 紧随 label，不再 space-between 贴卡片右缘 */
 .settings-form .field.switch {
   justify-content: flex-start;
 }
 .settings-form .field.switch .label {
-  flex: 0 0 150px;
+  flex: 0 0 164px;
+}
+/* 开关与上方文本控件列同起点：文本控件有 margin-left 12px（+gap 共 24px 偏移），开关行补齐同值 */
+.settings-form .field.switch input[type='checkbox'] {
+  margin-left: var(--space-3);
 }
 @media (max-width: 767px) {
   .settings-form .field:not(.switch):not(.theme-field) .label,
