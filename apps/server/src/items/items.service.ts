@@ -6,6 +6,7 @@ import type { Db } from '../db';
 import { DB_TOKEN } from '../db/db-token';
 import { categories, items } from '../db/schema';
 import { ApiException } from '../common/api.exception';
+import { assertItemFields } from '../common/item-fields';
 import { SettingsService } from '../settings/settings.service';
 import { localTimestamp } from '../reminders/clock';
 import { IMAGE_PATH_PATTERN, UploadsService } from '../uploads/uploads.service';
@@ -206,45 +207,11 @@ export class ItemsService {
 
   // ---------- 校验与映射 ----------
 
-  private assertCommon(fields: ItemCreateDto | ItemUpdateDto, existing?: ItemRow): void {
+  private assertCommon(fields: ItemCreateDto | ItemUpdateDto, _existing?: ItemRow): void {
     // name 校验已收敛到 normalizeItemName（M1/M8）：create 在入口调用（必填），
-    // update 仅在提供 name 时调用；这里不再重复校验
-    if (fields.quantity !== undefined) {
-      if (typeof fields.quantity !== 'number' || !Number.isFinite(fields.quantity) || fields.quantity < 0) {
-        throw new ApiException(400, API_ERROR_CODES.VALIDATION_ERROR, 'quantity 必须为 >= 0 的数字');
-      }
-    }
-    if (fields.expiryDate != null && !isValidISODate(fields.expiryDate)) {
-      throw new ApiException(400, API_ERROR_CODES.VALIDATION_ERROR, `expiry_date 非法：${String(fields.expiryDate)}`);
-    }
-    if (fields.purchaseDate != null && !isValidISODate(fields.purchaseDate)) {
-      throw new ApiException(400, API_ERROR_CODES.VALIDATION_ERROR, `purchase_date 非法：${String(fields.purchaseDate)}`);
-    }
-    if (fields.price !== undefined && fields.price !== null) {
-      if (typeof fields.price !== 'number' || !Number.isFinite(fields.price) || fields.price < 0) {
-        throw new ApiException(400, API_ERROR_CODES.VALIDATION_ERROR, 'price 必须为 >= 0 的数字');
-      }
-    }
-    if (fields.openShelfDays != null) {
-      if (!Number.isInteger(fields.openShelfDays) || fields.openShelfDays <= 0) {
-        throw new ApiException(400, API_ERROR_CODES.VALIDATION_ERROR, 'open_shelf_days 必须为正整数');
-      }
-    }
-    // S-M2：minQuantity 是低库存判定的阈值字段（D-1 链路唯一缺校验的字段）——
-    // 提供时必须为非负数，拒绝脏值入库（脏值会让前端低库存判定恒 false 且无从排查）
-    if (fields.minQuantity !== undefined && fields.minQuantity !== null) {
-      if (typeof fields.minQuantity !== 'number' || !Number.isFinite(fields.minQuantity) || fields.minQuantity < 0) {
-        throw new ApiException(400, API_ERROR_CODES.VALIDATION_ERROR, 'minQuantity 必须为 >= 0 的数字');
-      }
-    }
-    if (fields.remindDays != null) {
-      if (!Number.isInteger(fields.remindDays) || fields.remindDays <= 0) {
-        throw new ApiException(400, API_ERROR_CODES.VALIDATION_ERROR, 'remind_days 必须为正整数');
-      }
-    }
-    if (fields.categoryId != null && !Number.isInteger(fields.categoryId)) {
-      throw new ApiException(400, API_ERROR_CODES.VALIDATION_ERROR, 'category_id 必须为正整数');
-    }
+    // update 仅在提供 name 时调用；这里不再重复校验。
+    // 字段校验收敛到共享 helper（评审 I-2/I-4）：与 convert 表单路径同宽，unit 加类型闸
+    assertItemFields(fields);
   }
 
   private async assertCategoryExists(categoryId: number): Promise<void> {
@@ -266,12 +233,8 @@ export class ItemsService {
   }
 
   private async defaultRemindDays(): Promise<number> {
-    try {
-      const raw = await this.settingsService.getRaw();
-      return raw.default_remind_days;
-    } catch {
-      return 3;
-    }
+    // 收敛到 SettingsService（评审 I-3 配套）：convert 响应与列表共用同一默认口径
+    return this.settingsService.getDefaultRemindDays();
   }
 
   /** ItemDto 映射 + 有效过期日/临期状态计算（expiryStatus：expired=当日 >= 有效过期日；expiring=距有效过期日 <= 阈值） */

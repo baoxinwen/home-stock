@@ -249,6 +249,64 @@ describe('POST /api/shopping-items/:id/convert（M5.2/M5.3）', () => {
     expect(convertedList.map((s) => s.id)).toContain(shopping.id);
   });
 
+  it('表单路径字段校验与 items.create 同宽：非法日期/阈值 → 400（评审 I-2）', async () => {
+    const shopping = await createShopping({ name: uid('校验宽度') });
+    await markDone(shopping.id);
+    for (const payload of [
+      { expiryDate: 'not-a-date' },
+      { purchaseDate: 'abc' },
+      { openShelfDays: -3 },
+      { remindDays: 1.5 },
+      { minQuantity: 'abc' },
+    ]) {
+      const res = await request(server())
+        .post(`/api/shopping-items/${shopping.id}/convert`)
+        .send({ name: 'x', quantity: 1, ...payload });
+      expect(res.status, `payload ${JSON.stringify(payload)} 应 400`).toBe(400);
+      expect(res.body.code).toBe('VALIDATION_ERROR');
+    }
+    // 400 不消费清单项：仍可正常转换
+    const ok = await request(server())
+      .post(`/api/shopping-items/${shopping.id}/convert`)
+      .send({ name: 'x', quantity: 1 });
+    expect(ok.status).toBe(200);
+  });
+
+  it('convert categoryId/unit 非标量 → 400 而非 500（评审 I-2/I-4）', async () => {
+    const shopping = await createShopping({ name: uid('标量校验') });
+    await markDone(shopping.id);
+    const badCat = await request(server())
+      .post(`/api/shopping-items/${shopping.id}/convert`)
+      .send({ name: 'x', quantity: 1, categoryId: { x: 1 } });
+    expect(badCat.status).toBe(400);
+    expect(badCat.body.code).toBe('VALIDATION_ERROR');
+    const badUnit = await request(server())
+      .post(`/api/shopping-items/${shopping.id}/convert`)
+      .send({ name: 'x', quantity: 1, unit: { x: 1 } });
+    expect(badUnit.status).toBe(400);
+    expect(badUnit.body.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('表单路径带过期日 → convert 响应计算临期口径与列表一致（评审 I-3）', async () => {
+    const shopping = await createShopping({ name: uid('过期转换') });
+    await markDone(shopping.id);
+    const res = await request(server())
+      .post(`/api/shopping-items/${shopping.id}/convert`)
+      .send({ name: '过期转换品', quantity: 1, expiryDate: '2020-01-01' });
+    expect(res.status).toBe(200);
+    const item = (res.body.data as { item: ItemDto }).item;
+    // 清理现场放 finally：过期物品残留会污染后续「提醒扫描不产生通知」的全库断言，
+    // 且 RED 阶段断言先失败时也不能留下脏数据
+    try {
+      expect(item.expiryDate).toBe('2020-01-01');
+      // 未开封 → 有效过期日=过期日本身；2020-01-01 已过 → expired（此前硬编码 null/'none'）
+      expect(item.effectiveExpiryDate).toBe('2020-01-01');
+      expect(item.expiryStatus).toBe('expired');
+    } finally {
+      await request(server()).delete(`/api/items/${item.id}`);
+    }
+  });
+
   it('重复 convert → 409 ITEM_ALREADY_CONVERTED，且不重复生成库存', async () => {
     const name = uid('重复转换');
     const shopping = await createShopping({ name, quantity: 1 });

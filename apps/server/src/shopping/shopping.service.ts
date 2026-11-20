@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { and, desc, eq, ne } from 'drizzle-orm';
 import {
   API_ERROR_CODES,
+  computeEffectiveExpiry,
   type ConvertItemPayloadDto,
   type ConvertResult,
   type ItemDto,
@@ -14,7 +15,10 @@ import type { Db } from '../db';
 import { DB_TOKEN } from '../db/db-token';
 import { categories, items, shoppingListItems } from '../db/schema';
 import { ApiException } from '../common/api.exception';
+import { assertItemFields } from '../common/item-fields';
+import { SettingsService } from '../settings/settings.service';
 import { localTimestamp } from '../reminders/clock';
+import { expiryStatus } from '../items/items.service';
 
 type ShoppingRow = typeof shoppingListItems.$inferSelect;
 type ItemRow = typeof items.$inferSelect;
@@ -26,7 +30,10 @@ type ItemRow = typeof items.$inferSelect;
  */
 @Injectable()
 export class ShoppingService {
-  constructor(@Inject(DB_TOKEN) private readonly db: Db) {}
+  constructor(
+    @Inject(DB_TOKEN) private readonly db: Db,
+    @Inject(SettingsService) private readonly settings: SettingsService,
+  ) {}
 
   // ---------- 查询 ----------
 
@@ -119,6 +126,8 @@ export class ShoppingService {
   async convert(id: number, payload?: ConvertItemPayloadDto): Promise<ConvertResult> {
     assertId(id);
     const form = normalizeConvertPayload(payload);
+    // 评审 I-3：临期阈值口径与 items 列表一致（default_remind_days）；事务外读取（事务回调同步）
+    const defaultRemindDays = await this.settings.getDefaultRemindDays();
     return this.db.transaction((tx) => {
       const rows = tx.select().from(shoppingListItems).where(eq(shoppingListItems.id, id)).all();
       if (rows.length === 0) {
@@ -176,7 +185,7 @@ export class ShoppingService {
         .returning()
         .all()[0];
 
-      return { item: toItemDto(itemRow), shoppingItem: toDto(claimed[0]) };
+      return { item: toItemDto(itemRow, defaultRemindDays), shoppingItem: toDto(claimed[0]) };
     });
   }
 
@@ -240,7 +249,8 @@ interface NormalizedConvertPayload {
 /**
  * 表单确认 payload 归一：undefined / 无自有键的空对象 → undefined（走快捷转换）；
  * 有内容 → name 必填归一 + quantity 正数校验（表单路径 quantity 必填，
- * 快捷转换才回落清单项 quantity）。日期/阈值字段透传（与 create 同宽）。
+ * 快捷转换才回落清单项 quantity）。日期/阈值/categoryId/unit 走共享校验
+ * assertItemFields——与 items.create 同宽（评审 I-2/I-4：脏值 400，不再透传入库）。
  */
 function normalizeConvertPayload(payload?: ConvertItemPayloadDto): NormalizedConvertPayload | undefined {
   if (payload == null || typeof payload !== 'object' || Object.keys(payload).length === 0) {
@@ -250,7 +260,7 @@ function normalizeConvertPayload(payload?: ConvertItemPayloadDto): NormalizedCon
   if (typeof quantity !== 'number' || !Number.isFinite(quantity) || quantity <= 0) {
     throw new ApiException(400, API_ERROR_CODES.VALIDATION_ERROR, 'quantity 必须大于 0 才能转为库存');
   }
-  return {
+  const normalized: NormalizedConvertPayload = {
     name: normalizeName(payload.name),
     quantity,
     categoryId: payload.categoryId ?? null,
@@ -262,6 +272,8 @@ function normalizeConvertPayload(payload?: ConvertItemPayloadDto): NormalizedCon
     remindDays: payload.remindDays ?? null,
     minQuantity: payload.minQuantity ?? null,
   };
+  assertItemFields(normalized);
+  return normalized;
 }
 
 function assertQuantity(raw: unknown): number {
@@ -297,8 +309,18 @@ function toDto(r: ShoppingRow): ShoppingItemDto {
   };
 }
 
-/** 转库存生成的物品无过期日（M5.3）：映射为长期存储品（expiryStatus=none） */
-function toItemDto(r: ItemRow): ItemDto {
+/**
+ * convert 响应的 ItemDto 映射：临期两字段按行计算（评审 I-3——此前硬编码
+ * null/'none'，表单路径带 expiryDate 时响应违反 shared 契约的「server 计算值」），
+ * 口径与 items.service.toDto 一致（computeEffectiveExpiry + expiryStatus）。
+ */
+function toItemDto(r: ItemRow, defaultRemindDays: number): ItemDto {
+  const effective = computeEffectiveExpiry({
+    opened: r.opened,
+    openedAt: r.openedAt,
+    openShelfDays: r.openShelfDays,
+    expiryDate: r.expiryDate,
+  });
   return {
     id: r.id,
     name: r.name,
@@ -320,7 +342,7 @@ function toItemDto(r: ItemRow): ItemDto {
     updatedAt: r.updatedAt ?? null,
     source: 'shopping',
     imagePath: r.imagePath ?? null,
-    effectiveExpiryDate: null,
-    expiryStatus: 'none',
+    effectiveExpiryDate: effective,
+    expiryStatus: expiryStatus(effective, r.remindDays ?? defaultRemindDays),
   };
 }

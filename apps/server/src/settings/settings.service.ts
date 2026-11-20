@@ -118,6 +118,16 @@ export class SettingsService {
   }
 
   /** M5：读取提醒扫描最后成功运行日期；无记录（首次启动）返回 null */
+  /** 默认提醒天数（临期阈值），items 与 convert 两条创建入口共用同一口径；读取失败回退 3 */
+  async getDefaultRemindDays(): Promise<number> {
+    try {
+      const raw = await this.getRaw();
+      return raw.default_remind_days;
+    } catch {
+      return 3;
+    }
+  }
+
   async getReminderLastRunDate(): Promise<string | null> {
     const rows = this.db.select().from(settings).where(eq(settings.key, REMINDER_LAST_RUN_KEY)).all();
     return rows.length > 0 ? (rows[0].value ?? null) : null;
