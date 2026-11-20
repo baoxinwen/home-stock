@@ -129,15 +129,8 @@ export class ItemsService {
       }
     }
 
-    // 图片（0006）：提供时校验形态；换图/删图同步清理旧文件（新图已由上传接口落盘，不动新文件）
-    if (fields.imagePath !== undefined) {
-      patch.imagePath = normalizeImagePath(fields.imagePath);
-      if (existing.imagePath != null && existing.imagePath !== patch.imagePath) {
-        this.uploads.remove(existing.imagePath);
-      }
-    }
-
-    // 开封状态：置 1 → server 写 opened_at=当日（幂等：已开封时不覆盖首次日期）；置 0 → 清空 opened_at
+    // 开封状态：置 1 → server 写 opened_at=当日（幂等：已开封时不覆盖首次日期）；置 0 → 清空 opened_at。
+    // 评审 I-1：opened 校验必须在换图副作用之前——校验失败时不得已删除旧图
     if (fields.opened !== undefined) {
       if (fields.opened === 1) {
         patch.opened = 1;
@@ -152,7 +145,21 @@ export class ItemsService {
       }
     }
 
+    // 图片（0006）：提供时校验形态；换图/删图同步清理旧文件（新图已由上传接口落盘，不动新文件）。
+    // 评审 I-1：旧图清理挪到 db.update 成功之后——校验/写库失败时不得留下指向已删文件的 image_path
+    let oldImageToCleanup: string | null = null;
+    if (fields.imagePath !== undefined) {
+      patch.imagePath = normalizeImagePath(fields.imagePath);
+      if (existing.imagePath != null && existing.imagePath !== patch.imagePath) {
+        oldImageToCleanup = existing.imagePath;
+      }
+    }
+
     const row = this.db.update(items).set(patch).where(eq(items.id, id)).returning().all();
+    if (oldImageToCleanup != null) {
+      // remove 内部吞磁盘错误（附属资源语义），失败残留由孤儿清扫兜底
+      this.uploads.remove(oldImageToCleanup);
+    }
     return this.toDto(row[0], await this.defaultRemindDays());
   }
 

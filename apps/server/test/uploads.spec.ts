@@ -139,6 +139,28 @@ describe('items 图片关联（0006）', () => {
     expect(existsSync(join(uploadsDir(), first.path!))).toBe(false);
   });
 
+  it('换图与 opened 一起提交且 opened 非法 → 400，且旧图不被删除（评审 I-1：校验先于副作用）', async () => {
+    const first = await upload(Buffer.from(PNG_HEAD), 'image/png');
+    const second = await upload(Buffer.from(JPG_HEAD), 'image/jpeg', 'i1.jpg');
+    const name = uid('换图校验物品');
+    const created = await auth(request(server()).post('/api/items')).send({
+      name,
+      quantity: 1,
+      imagePath: first.path,
+    });
+    const id = (created.body.data as ItemDto).id;
+
+    const updated = await auth(request(server()).put(`/api/items/${id}`)).send({ imagePath: second.path, opened: 2 });
+    expect(updated.status).toBe(400);
+    // 副作用不得先于校验发生：旧图必须仍在，DB 仍指向旧图，新图不动
+    expect(existsSync(join(uploadsDir(), first.path!))).toBe(true);
+    expect(existsSync(join(uploadsDir(), second.path!))).toBe(true);
+    const listed = await auth(request(server()).get('/api/items')).query({ q: name });
+    const rows = listed.body.data as ItemDto[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0].imagePath).toBe(first.path);
+  });
+
   it('删除物品 → 图片文件同步清理', async () => {
     const { path } = await upload(Buffer.from(PNG_HEAD), 'image/png');
     const created = await auth(request(server()).post('/api/items')).send({
