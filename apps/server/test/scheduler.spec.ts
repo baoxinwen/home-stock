@@ -153,6 +153,7 @@ describe('重启补跑（M5：容器跨过提醒时刻重启的当天不漏提�
     const s = new ReminderScheduler(svc as never, settings, fakeCron() as never, { log: (c, l, m) => logs.push({ channel: c, level: l, message: m }) }, fixedClock('2026-11-07T09:00:00'));
 
     await s.onModuleInit();
+    await s.catchUpPromise;
 
     expect(rec.sent).toEqual([{ itemId: id, type: 'expired', sentDate: '2026-11-07' }]);
     expect(await settings.getReminderLastRunDate()).toBe('2026-11-07');
@@ -168,6 +169,7 @@ describe('重启补跑（M5：容器跨过提醒时刻重启的当天不漏提�
     const s = new ReminderScheduler(svc as never, settings, fakeCron() as never, undefined, fixedClock('2026-11-07T09:00:00'));
 
     await s.onModuleInit();
+    await s.catchUpPromise;
 
     expect(rec.sent).toEqual([]);
   });
@@ -180,6 +182,7 @@ describe('重启补跑（M5：容器跨过提醒时刻重启的当天不漏提�
     const s = new ReminderScheduler(svc as never, settings, fakeCron() as never, undefined, fixedClock('2026-11-07T07:00:00'));
 
     await s.onModuleInit();
+    await s.catchUpPromise;
 
     expect(rec.sent).toEqual([]);
   });
@@ -191,6 +194,7 @@ describe('重启补跑（M5：容器跨过提醒时刻重启的当天不漏提�
     const s = new ReminderScheduler(svc as never, settings, fakeCron() as never, undefined, fixedClock('2026-11-07T20:00:00'));
 
     await s.onModuleInit();
+    await s.catchUpPromise;
 
     expect(rec.sent).toHaveLength(1);
     expect(await settings.getReminderLastRunDate()).toBe('2026-11-07');
@@ -205,12 +209,32 @@ describe('重启补跑（M5：容器跨过提醒时刻重启的当天不漏提�
     const s = new ReminderScheduler(svc as never, settings, fakeCron() as never, undefined, clock);
 
     await s.onModuleInit();
+    await s.catchUpPromise;
     // 模拟进程再次启动（同一天、上次补跑已成功写入当日）
     await settings.setReminderLastRunDate('2026-11-07');
     const s2 = new ReminderScheduler(svc as never, settings, fakeCron() as never, undefined, clock);
     await s2.onModuleInit();
+    await s2.catchUpPromise;
 
     expect(rec.sent).toHaveLength(1);
+  });
+
+  it('onModuleInit 不等待补跑完成：promise 挂在 catchUpPromise 上，await 后效果等同补跑（评审 I-5）', async () => {
+    const { ReminderScheduler } = await import('../src/reminders/reminder.scheduler');
+    const id = insertExpiredItem('不阻塞启动牛奶');
+    const { svc, rec } = await makeService('2026-11-07T09:00:00');
+    await settings.setReminderLastRunDate('2026-11-06');
+    const s = new ReminderScheduler(svc as never, settings, fakeCron() as never, undefined, fixedClock('2026-11-07T09:00:00'));
+
+    await s.onModuleInit();
+    await s.catchUpPromise;
+
+    // 补跑不得阻塞启动（外发通知可能各阻塞 10s+）；promise 暴露供需要同步语义的调用方等待
+    const pending = (s as unknown as { catchUpPromise?: Promise<void> | null }).catchUpPromise;
+    expect(pending).toBeTruthy();
+    await pending;
+    expect(rec.sent).toEqual([{ itemId: id, type: 'expired', sentDate: '2026-11-07' }]);
+    expect(await settings.getReminderLastRunDate()).toBe('2026-11-07');
   });
 });
 

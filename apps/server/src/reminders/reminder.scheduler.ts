@@ -28,6 +28,8 @@ const FALLBACK_HOUR = 8;
 export class ReminderScheduler {
   private task: { stop(): void } | null = null;
   private hour = FALLBACK_HOUR;
+  /** 评审 I-5：启动补跑的 promise——onModuleInit 不等待它，需要补跑完成语义的调用方（测试）await 此成员 */
+  catchUpPromise: Promise<void> | null = null;
   private readonly onSettingsUpdated = (): void => {
     void this.rebuild().catch((e: unknown) => {
       const message = e instanceof Error ? e.message : String(e);
@@ -52,7 +54,10 @@ export class ReminderScheduler {
   /** 启动：按当前设置注册每日任务；随后检查是否需要补跑错过的今日扫描（M5） */
   async onModuleInit(): Promise<void> {
     await this.rebuild();
-    await this.catchUpMissedRun();
+    // 评审 I-5：补跑不阻塞启动——app.init() 期间 HTTP 未监听，SMTP 等
+    // 外发通知超时（单物品 10s+，企微 fetch 无超时可拖 10 分钟）会把健康检查
+    // 拖到 unhealthy。catchUpMissedRun/runNow 内部均有异常兜底，fire-and-forget 无未处理 rejection。
+    this.catchUpPromise = this.catchUpMissedRun();
   }
 
   onModuleDestroy(): void {
