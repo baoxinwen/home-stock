@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Post, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Inject, Param, Post, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { API_ERROR_CODES, type BackupFileDto, type RestoreResultDto } from '@home-stock/shared';
@@ -50,6 +50,19 @@ export class BackupController {
   @Get('list')
   list(): { data: BackupFileDto[] } {
     return { data: this.backups.list() };
+  }
+
+  /** 按名下载历史备份（评审后用户要求）：文件名白名单在 service 校验 */
+  @Get(':name')
+  downloadByName(@Param('name') name: string, @Res() res: Response): void {
+    const { path, filename } = this.backups.downloadByName(name);
+    res.setHeader('Content-Type', 'application/x-sqlite3');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.sendFile(path, (err) => {
+      if (err && !res.headersSent) {
+        res.status(500).json({ code: API_ERROR_CODES.INTERNAL_ERROR, message: '备份下载失败' });
+      }
+    });
   }
 
   @Post('restore')

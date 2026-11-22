@@ -37,9 +37,9 @@ function isBackupDownloadPath(req: Request): boolean {
   const path = (req.path || '').toLowerCase().replace(/\/+$/, '');
   return (
     path === '/backup' ||
-    path === '/backup/list' ||
     path === '/api/backup' ||
-    path === '/api/backup/list' ||
+    path.startsWith('/backup/') ||
+    path.startsWith('/api/backup/') ||
     path.startsWith('/uploads/') ||
     path.startsWith('/api/uploads/')
   );

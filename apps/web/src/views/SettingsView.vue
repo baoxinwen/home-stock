@@ -82,6 +82,22 @@ const restoring = ref(false);
 const restoreFile = ref<HTMLInputElement | null>(null);
 /** 历史备份折叠区（铁律 11：次要信息收进折叠，不占主轴） */
 const historyOpen = ref(false);
+/** 正在下载的历史备份名（行级忙态，互不阻塞） */
+const downloadingName = ref<string | null>(null);
+
+/** 下载历史备份到本机（I-7 blob 链路复用；失败行内提示） */
+async function downloadBackupFile(name: string): Promise<void> {
+  if (downloadingName.value) return; // 同一时刻一份，防重复触发
+  backupError.value = '';
+  downloadingName.value = name;
+  try {
+    await api.downloadBackup(name);
+  } catch (e) {
+    backupError.value = e instanceof Error ? e.message : '备份下载失败';
+  } finally {
+    downloadingName.value = null;
+  }
+}
 
 function pickRestoreFile(): void {
   if (restoring.value) return; // 评审 A-L3：忙态守卫拦重复提交
@@ -840,8 +856,19 @@ onMounted(() => {
             <p v-if="!backups.length" class="muted-text">暂无备份文件</p>
             <ul v-else class="backup-list">
               <li v-for="b in backups" :key="b.name" class="backup-item">
-                <span class="backup-name">{{ b.name }}</span>
-                <span class="backup-meta num">{{ formatSize(b.size) }} · {{ formatTime(b.createdAt) }}</span>
+                <div class="backup-item-info">
+                  <span class="backup-name">{{ b.name }}</span>
+                  <span class="backup-meta num">{{ formatSize(b.size) }} · {{ formatTime(b.createdAt) }}</span>
+                </div>
+                <button
+                  class="ghost-btn backup-item-download"
+                  type="button"
+                  :aria-disabled="downloadingName === b.name ? 'true' : undefined"
+                  :aria-label="`下载 ${b.name}`"
+                  @click="downloadBackupFile(b.name)"
+                >
+                  <DownloadIcon />
+                </button>
               </li>
             </ul>
           </div>
@@ -1263,16 +1290,29 @@ onMounted(() => {
 }
 .backup-item {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 10px;
   padding: 8px 10px;
   border-radius: var(--radius-m);
   background: var(--color-canvas);
+}
+.backup-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 .backup-name {
   font-size: 13px;
   color: var(--color-text);
   word-break: break-all;
+}
+/* 行尾下载钮：图标钮（aria-label 承担语义），与名称行等高 */
+.backup-item-download {
+  flex: none;
+  min-width: auto;
+  padding: 6px 10px;
 }
 .backup-meta {
   font-size: 12px;

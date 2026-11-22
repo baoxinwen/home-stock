@@ -280,14 +280,16 @@ export class ApiClient {
    * 直接渲染 JSON 错误页）；401 走既有 onUnauthorized，失败抛 ApiError 由调用方提示。
    * server 侧 ?token= 已同步收窄为仅备份下载端点可用。
    */
-  async downloadBackup(): Promise<void> {
+  /** name 省略 = 创建新快照下载；传名 = 按名下载历史备份（server 白名单校验） */
+  async downloadBackup(name?: string): Promise<void> {
     const headers: Record<string, string> = {};
     const token = this.getToken?.();
     if (token) headers['X-Access-Token'] = token;
 
+    const url = name ? `${this.baseUrl}/backup/${encodeURIComponent(name)}` : `${this.baseUrl}/backup`;
     let res: Response;
     try {
-      res = await this.fetchImpl(`${this.baseUrl}/backup`, { headers });
+      res = await this.fetchImpl(url, { headers });
     } catch {
       throw new ApiError(API_ERROR_CODES.INTERNAL_ERROR, '网络请求失败，请重试');
     }
@@ -322,14 +324,14 @@ export class ApiClient {
     const filename = match?.[1] ?? `stock-${Date.now()}.db`;
 
     const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
+    const objectUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
+    a.href = objectUrl;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(objectUrl);
   }
 
   listBackups(): Promise<BackupFileDto[]> {

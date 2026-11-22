@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, join, resolve, sep } from 'node:path';
 import Database from 'better-sqlite3';
 import {
   API_ERROR_CODES,
@@ -46,6 +46,8 @@ const SQLITE_MAGIC = Buffer.from('SQLite format 3\u0000', 'binary');
 const DEFAULT_KEEP = 14;
 const DEFAULT_MAX_BYTES = 2 * 1024 * 1024 * 1024;
 const SCHEDULED_PREFIX = 'stock-';
+/** 历史备份文件名白名单：字母/数字/连字符/下划线 + 点分段，.db 结尾（拒绝 ../ 与分隔符） */
+const BACKUP_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]*(\.[A-Za-z0-9_-]+)*\.db$/;
 const SAFETY_PREFIX = 'pre-restore-';
 
 const defaultLog: BackupLog = (channel, level, message) => {
@@ -148,6 +150,25 @@ export class BackupService {
       throw e;
     }
     return { path, filename };
+  }
+
+  /**
+   * 按名下载历史备份（定时备份 stock-* / 恢复前安全备份 pre-restore-*）。
+   * 文件名白名单 + resolve 包含性双重校验防路径穿越；列表里的都是已落盘的
+   * 完整快照文件（非活动库），直接下发即可。
+   */
+  downloadByName(name: string): { path: string; filename: string } {
+    if (!BACKUP_NAME_PATTERN.test(name)) {
+      throw new ApiException(400, API_ERROR_CODES.VALIDATION_ERROR, '备份文件名非法');
+    }
+    const resolved = resolve(this.backupDir, name);
+    if (!resolved.startsWith(resolve(this.backupDir) + sep)) {
+      throw new ApiException(400, API_ERROR_CODES.VALIDATION_ERROR, '备份文件名非法');
+    }
+    if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
+      throw new ApiException(404, API_ERROR_CODES.NOT_FOUND, `备份 ${name} 不存在`);
+    }
+    return { path: resolved, filename: name };
   }
 
   cleanupDownload(path: string): void {

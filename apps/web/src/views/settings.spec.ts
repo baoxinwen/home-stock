@@ -269,6 +269,22 @@ describe('SettingsView 备份与恢复（M8）/ 退出登录（M9.2）', () => {
     expect(wrapper.find('.backup-error').text()).toContain('下载失败');
   });
 
+  it('历史备份行内下载 → downloadBackup(文件名)', async () => {
+    vi.mocked(api.getSettings).mockResolvedValue(makeSettings());
+    vi.mocked(api.listBackups).mockResolvedValue([
+      { name: 'stock-20260101-010101.db', size: 1024, createdAt: '2026-01-01T01:01:01Z' },
+    ]);
+    const router = await makeRouter('/settings');
+    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
+    await flushPromises();
+
+    const btn = wrapper.find('.backup-item-download');
+    expect(btn.exists()).toBe(true);
+    await btn.trigger('click');
+    await flushPromises();
+    expect(api.downloadBackup).toHaveBeenCalledWith('stock-20260101-010101.db');
+  });
+
   it('恢复需要二次确认：应用内面板取消则不调用 API（体检表 P2-11，弃用原生 confirm）', async () => {
     vi.mocked(api.getSettings).mockResolvedValue(makeSettings());
     const confirm = vi.spyOn(window, 'confirm');

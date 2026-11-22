@@ -129,6 +129,42 @@ describe('GET /api/backup/list（备份列表）', () => {
   });
 });
 
+describe('GET /api/backup/:name（按名下载历史备份）', () => {
+  let ctx: TestCtx;
+
+  beforeEach(async () => {
+    ctx = await startTestApp();
+    mkdirSync(ctx.backupDir, { recursive: true });
+    writeFileSync(join(ctx.backupDir, 'stock-20260101-010101.db'), Buffer.from('old'));
+  });
+
+  afterEach(async () => {
+    await stopTestApp(ctx);
+  });
+
+  it('按名下载 → 200 快照内容与文件名 attachment', async () => {
+    const res = await http(ctx).get('/api/backup/stock-20260101-010101.db');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('x-sqlite3');
+    expect(res.headers['content-disposition']).toContain('stock-20260101-010101.db');
+    expect(res.headers['content-length']).toBe('3');
+  });
+
+  it('不存在的备份名 → 404 NOT_FOUND', async () => {
+    const res = await http(ctx).get('/api/backup/stock-19990101-000000.db');
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe('NOT_FOUND');
+  });
+
+  it('路径穿越/非法名 → 400 VALIDATION_ERROR', async () => {
+    for (const name of ['..%2Fstock.db', 'sub%2Fstock.db', 'notes.txt', '..db']) {
+      const res = await http(ctx).get(`/api/backup/${name}`);
+      expect(res.status, name).toBe(400);
+      expect(res.body.code).toBe('VALIDATION_ERROR');
+    }
+  });
+});
+
 describe('POST /api/backup/restore（M8.2 手动恢复）', () => {
   let ctx: TestCtx;
 
