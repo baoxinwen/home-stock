@@ -362,7 +362,7 @@ onMounted(async () => {
 
     <p v-if="loading && items.length === 0" class="muted-text">加载中…</p>
     <p v-else-if="pendingItems.length === 0 && doneItems.length === 0" class="empty-state">
-      清单还是空的，添加第一件要买的东西吧。
+      清单还是空的
     </p>
 
     <section v-if="pendingItems.length > 0" class="pending-section">

@@ -12,7 +12,9 @@ import { api } from '../api';
 import { clearStoredToken } from '../auth/token';
 import BackButton from '../components/BackButton.vue';
 import ChevronIcon from '../components/ChevronIcon.vue';
-import CheckIcon from '../components/CheckIcon.vue';
+import AlertIcon from '../components/AlertIcon.vue';
+import DownloadIcon from '../components/DownloadIcon.vue';
+import UploadIcon from '../components/UploadIcon.vue';
 import { useTheme, type ThemePreference } from '../composables/useTheme';
 import { useOverlayA11y } from '../composables/useOverlayA11y';
 
@@ -78,11 +80,24 @@ const backupError = ref('');
 const backupOk = ref('');
 const restoring = ref(false);
 const restoreFile = ref<HTMLInputElement | null>(null);
-/** 已选备份文件名回显（原生 input 隐藏后取代 UA「未选择文件」文案） */
-const restoreFileName = ref('');
+/** 历史备份折叠区（铁律 11：次要信息收进折叠，不占主轴） */
+const historyOpen = ref(false);
 
+function pickRestoreFile(): void {
+  if (restoring.value) return; // 评审 A-L3：忙态守卫拦重复提交
+  backupError.value = '';
+  restoreFile.value?.click();
+}
+
+/** 恢复备份按钮打开选择器；选中文件即进二次确认面板（覆盖当前数据属不可逆操作） */
 function onRestoreFileChange(e: Event): void {
-  restoreFileName.value = (e.target as HTMLInputElement).files?.[0]?.name ?? '';
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0] ?? null;
+  input.value = ''; // 复位以便重复选择同一文件仍触发 change
+  if (!file) return;
+  backupOk.value = '';
+  pendingRestoreFile.value = file;
+  confirmingRestore.value = true;
 }
 
 /** I-7 移植：blob + header 认证下载（口令不再进 URL），失败行内提示 */
@@ -96,26 +111,6 @@ async function downloadBackupAction(): Promise<void> {
     backupError.value = e instanceof Error ? e.message : '备份下载失败';
   } finally {
     downloading.value = false;
-  }
-}
-
-// 铁律 10 反馈自熄：复制成功的对勾 2.5s 后自动淡出恢复（重复点击重置计时）
-const copiedName = ref<string | null>(null);
-let copiedTimer: ReturnType<typeof setTimeout> | null = null;
-
-async function copyBackupName(name: string): Promise<void> {
-  try {
-    await navigator.clipboard.writeText(name);
-    copiedName.value = name;
-    if (copiedTimer) clearTimeout(copiedTimer);
-    copiedTimer = setTimeout(() => {
-      copiedName.value = null;
-      copiedTimer = null;
-    }, 2500);
-  } catch {
-    // 评审 I-7：剪贴板不可用（权限/非安全上下文——局域网 HTTP 部署常走）必须给出反馈，
-    // 复用下载失败的行内提示位，不再静默让用户以为按钮坏了
-    backupError.value = '复制失败：当前环境不支持剪贴板访问';
   }
 }
 
@@ -389,19 +384,6 @@ useOverlayA11y({
   open: confirmingRestore,
 });
 
-async function restore(): Promise<void> {
-  if (restoring.value) return; // 评审 A-L3：忙态保留可聚焦后靠守卫拦重复提交
-  backupError.value = '';
-  backupOk.value = '';
-  const file = restoreFile.value?.files?.[0] ?? null;
-  if (!file) {
-    backupError.value = '请选择要恢复的备份文件';
-    return;
-  }
-  pendingRestoreFile.value = file;
-  confirmingRestore.value = true;
-}
-
 function cancelRestore(): void {
   confirmingRestore.value = false;
   pendingRestoreFile.value = null;
@@ -417,7 +399,6 @@ async function confirmRestore(): Promise<void> {
     const result = await api.restoreBackup(file);
     backupOk.value = `恢复完成：物品 ${result.restored.items} 条，安全备份 ${result.safetyBackup}`;
     if (restoreFile.value) restoreFile.value.value = '';
-    restoreFileName.value = '';
     // I-4 移植：库已被备份整体覆盖，重新拉设置回填表单；否则表单停留恢复前旧值，
     // 随后的保存会用旧值覆盖新库（load 末尾自带 loadBackups）
     await load();
@@ -612,14 +593,13 @@ onMounted(() => {
               <span class="theme-card-label">{{ opt.label }}</span>
             </button>
           </div>
-          <p class="theme-hint">
-            当前生效：{{ themeResolved === 'dark' ? '深色' : '浅色' }}；跟随系统时随设备外观自动切换。
-          </p>
+          <p class="theme-hint">当前生效：{{ themeResolved === 'dark' ? '深色' : '浅色' }}</p>
         </div>
       </section>
 
       <section id="sec-remind" v-show="activeTab === 'remind'" class="card">
         <h2 class="section-title">提醒</h2>
+        <div class="remind-block">
         <label class="field">
           <span class="label">每日提醒时刻</span>
           <select id="reminder-hour" v-model.number="form.reminder_hour">
@@ -642,6 +622,7 @@ onMounted(() => {
           <span class="label">过期物品自动归档</span>
           <input id="auto-archive" v-model="form.auto_archive_expired" type="checkbox" :true-value="1" :false-value="0" />
         </label>
+        </div>
       </section>
 
       <!-- 通知设置：应用内/邮件/企微三渠道 + 发送日志合并为一个 tab（IA 调整：渠道属性相同） -->
@@ -790,12 +771,12 @@ onMounted(() => {
             :aria-expanded="logsOpen"
             @click="logsOpen = !logsOpen"
           >
-            发送日志（共 {{ logs.length }} 条，展示最近 8 条）
+            发送日志（{{ logs.length }}）
             <ChevronIcon :rotate="logsOpen ? 90 : 0" />
           </button>
           <div class="logs-collapse" :class="{ open: logsOpen }">
             <div class="logs-collapse-inner">
-              <p v-if="!logs.length" class="muted-text">暂无发送记录；触发提醒扫描或发送渠道测试后，记录会出现在这里。</p>
+              <p v-if="!logs.length" class="muted-text">暂无发送记录</p>
               <ul v-else class="log-list">
                 <li v-for="l in logs.slice(0, 8)" :key="l.id" class="log-item" :class="{ 'is-error': l.level === 'error' }">
                   <span class="log-channel">{{ channelLabel(l.channel) }}</span>
@@ -809,100 +790,76 @@ onMounted(() => {
 
       <section id="sec-backup" v-show="activeTab === 'backup'" class="card">
         <h2 class="section-title">备份与恢复</h2>
-        <!-- 左右两栏块（GitHub/Vercel settings 语言）：左列标题+说明，右列操作区；选择器保持不变 -->
-        <div class="backup-block">
-          <div class="block-info">
-            <h3 class="block-title">创建备份</h3>
-            <p class="muted-text">把全部数据打包为单个 SQLite 文件，下载到本机。</p>
-          </div>
-          <div class="block-main">
-            <button
-              class="ghost-btn backup-download"
-              type="button"
-              :aria-disabled="downloading ? 'true' : undefined"
-              @click="downloadBackupAction"
-            >
-              {{ downloading ? '下载中…' : '备份下载' }}
-            </button>
-          </div>
+        <!-- 参考用户另一项目备份布局（2026-11-22）：动作按钮前置 + 一条后果警示，
+             历史备份折叠为次要区（铁律 11：布局自解释，不挂说明段） -->
+        <div class="backup-actions">
+          <button
+            class="ghost-btn backup-now"
+            type="button"
+            :aria-disabled="downloading ? 'true' : undefined"
+            @click="downloadBackupAction"
+          >
+            <DownloadIcon />
+            {{ downloading ? '备份中…' : '立即备份' }}
+          </button>
+          <button
+            class="ghost-btn"
+            type="button"
+            :aria-disabled="restoring ? 'true' : undefined"
+            @click="pickRestoreFile"
+          >
+            <UploadIcon />
+            {{ restoring ? '恢复中…' : '恢复备份' }}
+          </button>
+          <!-- 原生 file input sr-only：恢复备份按钮代为打开选择器，选中即进确认面板 -->
+          <input
+            ref="restoreFile"
+            class="restore-file"
+            type="file"
+            accept=".db,application/x-sqlite3"
+            @change="onRestoreFileChange"
+          />
         </div>
-        <div class="backup-block">
-          <div class="block-info">
-            <h3 class="block-title">从备份恢复</h3>
-            <p class="muted-text">用备份文件覆盖当前数据，操作前自动留存安全备份。</p>
-            <!-- 反馈状态行（下载/恢复共用，A-M5 稳定 polite 区常驻渲染空态零占位）：
-                 放左栏文案尾部而非两块之间——card 是 gap 10px 的 grid，空 p 夹在中间会被
-                 上下各收一次 gap 成 20px 双倍间隔 -->
-            <p v-if="backupError" class="backup-error form-error" role="alert">{{ backupError }}</p>
-            <p v-else class="backup-ok form-ok" role="status"><template v-if="backupOk">{{ backupOk }}</template></p>
-          </div>
-          <div class="block-main">
-            <!-- 用户反馈（2026-11-11）：自定义按钮与原生「选择文件」按钮重复——
-                 只保留一个按钮，原生 input 视觉隐藏，选中后回显文件名 -->
-            <div class="restore-field">
-              <label class="ghost-btn file-pick">
-                选择备份文件
-                <input
-                  ref="restoreFile"
-                  class="restore-file"
-                  type="file"
-                  accept=".db,application/x-sqlite3"
-                  @change="onRestoreFileChange"
-                />
-              </label>
-              <span v-if="restoreFileName" class="file-picked num">{{ restoreFileName }}</span>
-            </div>
-            <button class="ghost-btn danger restore-btn" type="button" :aria-disabled="restoring ? 'true' : undefined" @click="restore">
-              {{ restoring ? '恢复中…' : '上传恢复' }}
-            </button>
-          </div>
-        </div>
-        <div class="backup-block backup-list-wrap">
-          <div class="block-info">
-            <h3 class="block-title">备份文件</h3>
-            <p class="muted-text">服务器上保留的历史备份，可随时用于恢复。</p>
-          </div>
-          <div class="block-main">
-            <p v-if="!backups.length" class="muted-text">尚未创建备份；点上方「备份下载」生成第一份快照。</p>
+        <p class="backup-warn"><AlertIcon />恢复会用备份覆盖当前全部数据，不可撤销。</p>
+        <!-- 反馈状态行（下载/恢复共用，A-M5 稳定 polite 区常驻渲染空态零占位） -->
+        <p v-if="backupError" class="backup-error form-error" role="alert">{{ backupError }}</p>
+        <p v-else class="backup-ok form-ok" role="status"><template v-if="backupOk">{{ backupOk }}</template></p>
+
+        <!-- 历史备份：定时备份 + 恢复前安全备份，折叠不占主轴（铁律 7 Grid 0fr→1fr） -->
+        <button
+          class="sub-title log-toggle"
+          type="button"
+          :aria-expanded="historyOpen"
+          @click="historyOpen = !historyOpen"
+        >
+          历史备份（{{ backups.length }}）
+          <ChevronIcon :rotate="historyOpen ? 90 : 0" />
+        </button>
+        <div class="logs-collapse" :class="{ open: historyOpen }">
+          <div class="logs-collapse-inner">
+            <p v-if="!backups.length" class="muted-text">暂无备份文件</p>
             <ul v-else class="backup-list">
               <li v-for="b in backups" :key="b.name" class="backup-item">
                 <span class="backup-name">{{ b.name }}</span>
-                <span class="backup-meta">{{ formatSize(b.size) }} · {{ formatTime(b.createdAt) }}</span>
-                <button
-                  class="copy-btn"
-                  type="button"
-                  :class="{ copied: copiedName === b.name }"
-                  :aria-label="`复制文件名 ${b.name}`"
-                  @click="copyBackupName(b.name)"
-                >
-                  <!-- 铁律 10 反馈自熄：复制成功对勾 2.5s 后自动淡出恢复 -->
-                  <span v-if="copiedName === b.name" class="copy-done"><CheckIcon /></span>
-                  <span v-else>复制</span>
-                </button>
+                <span class="backup-meta num">{{ formatSize(b.size) }} · {{ formatTime(b.createdAt) }}</span>
               </li>
             </ul>
           </div>
         </div>
 
-        <!-- 离线缓存（PWA 运维兜底）：大厂告知法——正向能力陈述 + 状态点，版本安静 meta；
-             不暴露实现机制（界面红线：只说后果）。清空走二次确认并整页刷新重注册 -->
-        <div class="backup-block">
-          <div class="block-info">
-            <h3 class="block-title">离线缓存</h3>
-            <p class="muted-text">断网时可查看库存与清单，联网后自动更新。</p>
-          </div>
-          <div class="block-main">
-            <p class="offline-meta">
-              <span class="offline-status">
-                <span class="offline-dot" :class="{ 'offline-dot-off': !swAvailable }" aria-hidden="true" />
-                {{ swAvailable ? '可离线使用' : '此地址暂不支持离线' }}
-              </span>
-              <span class="num">版本 {{ appVersion }}</span>
-            </p>
-            <button class="ghost-btn danger offline-clear" type="button" @click="clearOfflineCache">
-              {{ clearOfflineConfirming ? '确认清除（将刷新页面）' : '清除离线缓存' }}
-            </button>
-          </div>
+        <!-- 离线缓存（PWA 运维兜底）：状态点 + 版本安静 meta；清空走二次确认并整页刷新重注册 -->
+        <div class="offline-block">
+          <h3 class="sub-title">离线缓存</h3>
+          <p class="offline-meta">
+            <span class="offline-status">
+              <span class="offline-dot" :class="{ 'offline-dot-off': !swAvailable }" aria-hidden="true" />
+              {{ swAvailable ? '可离线使用' : '此地址暂不支持离线' }}
+            </span>
+            <span class="num">版本 {{ appVersion }}</span>
+          </p>
+          <button class="ghost-btn danger offline-clear" type="button" @click="clearOfflineCache">
+            {{ clearOfflineConfirming ? '确认清除（将刷新页面）' : '清除离线缓存' }}
+          </button>
         </div>
       </section>
 
@@ -921,8 +878,7 @@ onMounted(() => {
     <!-- 体检表 D-2：类别管理（列表+增改删；删除受占用保护，非保存表单一部分） -->
     <section id="sec-categories" v-show="activeTab === 'categories'" class="card">
       <h2 class="section-title">类别管理</h2>
-      <p class="muted-text">用于库存分类筛选与统计分组；类别下仍有物品时不可删除。</p>
-      <p v-if="categoryError" class="form-error" role="alert">{{ categoryError }}</p>
+            <p v-if="categoryError" class="form-error" role="alert">{{ categoryError }}</p>
       <p v-if="categoryNotice" class="form-ok" role="status">{{ categoryNotice }}</p>
 
       <form class="category-add" @submit.prevent="createCategory">
@@ -958,7 +914,7 @@ onMounted(() => {
           </template>
         </li>
       </ul>
-      <p v-if="categoryRows.length === 0 && !categoryError" class="muted-text">还没有类别，添加第一个吧。</p>
+      <p v-if="categoryRows.length === 0 && !categoryError" class="muted-text">还没有类别</p>
     </section>
 
     <!-- 体检表 P2-11：恢复确认面板（与物品删除同款交互语言）；评审 A-M1：Teleport + 焦点管理 -->
@@ -1181,12 +1137,40 @@ onMounted(() => {
   display: grid;
   gap: 8px;
 }
-/* 子块底座：备份与通知渠道共用（canvas 色在 surface 卡片上的明度分层，铁律 1 不加边框） */
-.backup-block,
-.channel-block {
+/* 动作行：立即备份 + 恢复备份（参考布局：按钮前置，图标行内对齐铁律 5） */
+.backup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.backup-actions .ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+/* 后果警示条（参考布局同款）：柔和琥珀底，覆盖数据类不可逆操作常驻提示 */
+.backup-warn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-l);
+  background: var(--tone-yellow-bg);
+  color: var(--tone-yellow-fg);
+  font-size: 13px;
+}
+/* 子块底座：提醒/离线缓存/通知渠道共用（canvas 色在 surface 卡片上的明度分层，铁律 1 不加边框） */
+.channel-block,
+.offline-block,
+.remind-block {
   padding: 14px 16px;
   background: var(--color-canvas);
   border-radius: var(--radius-l);
+}
+.remind-block {
+  display: grid;
+  gap: 8px;
 }
 .channel-block {
   display: grid;
@@ -1203,46 +1187,7 @@ onMounted(() => {
   min-width: 128px;
   text-align: center;
 }
-/* 备份块：左右两栏——左列标题+说明（语义组），右列操作区，横向填满不留空 */
-.backup-block {
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 4px 24px;
-}
-.block-info {
-  display: grid;
-  gap: 4px;
-  align-content: start;
-}
-.block-title {
-  font-size: 14px;
-  font-weight: var(--fw-semibold);
-  color: var(--color-ink);
-  margin: 0;
-}
-.block-main {
-  display: grid;
-  gap: 10px;
-  align-content: start;
-}
-.block-main .ghost-btn {
-  justify-self: start;
-  min-width: 128px;
-  text-align: center;
-}
-.restore-field {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-/* 选择备份文件按钮（原生 file input 视觉隐藏，label 触发点击） */
-.file-pick {
-  justify-self: start;
-  min-width: 128px;
-  text-align: center;
-  cursor: pointer;
-}
-/* sr-only：保留可聚焦/可访问，仅视觉隐藏（不再渲染 UA「选择文件」按钮） */
+/* sr-only：保留可聚焦/可访问，仅视觉隐藏（恢复备份按钮代为打开选择器） */
 .restore-file {
   position: absolute;
   width: 1px;
@@ -1250,20 +1195,6 @@ onMounted(() => {
   opacity: 0;
   overflow: hidden;
   clip-path: inset(50%);
-}
-.file-picked {
-  font-size: 13px;
-  color: var(--color-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-@media (max-width: 767px) {
-  .backup-block {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
 }
 /* 渠道子块标题行：渠道名左，启用开关/状态徽章右 */
 .channel-block-head {
@@ -1346,30 +1277,6 @@ onMounted(() => {
 .backup-meta {
   font-size: 12px;
   color: var(--color-muted);
-}
-/* file input：padding 撑高容器（否则 UA 按钮上下裁边）；::file-selector-button
-   接管「选择文件」为全站按钮语言（Chrome/Edge/Firefox 均支持），暗色随令牌翻转 */
-.restore-file {
-  flex: 1;
-  min-width: 0;
-  font-size: 13px;
-  padding: 4px 8px;
-  color: var(--color-muted);
-  cursor: pointer;
-}
-.restore-file::file-selector-button {
-  border: none;
-  background: var(--color-hover);
-  border-radius: var(--radius-s);
-  padding: 6px 12px;
-  margin-right: 10px;
-  font: inherit;
-  color: var(--color-text);
-  cursor: pointer;
-  transition: background 150ms ease-out;
-}
-.restore-file::file-selector-button:hover {
-  background: var(--color-track);
 }
 .log-list {
   list-style: none;
@@ -1529,37 +1436,19 @@ onMounted(() => {
 }
 </style>
 <style scoped>
-/* 铁律 10 复制反馈自熄：对勾淡出恢复 */
-.copy-btn {
-  flex: none;
-  align-self: flex-start; /* backup-item 纵向 flex 默认 stretch 会把按钮拉满整行 */
-  border: none;
-  background: var(--color-field);
-  border-radius: var(--radius-m);
-  padding: 8px 14px; /* 与本 tab 其他 ghost-btn 同规格（此前 12px 小字独一份，视觉不统一） */
-  font-size: 13px;
-  color: var(--color-text);
-  cursor: pointer;
-  transition: background 150ms ease-out, color 150ms ease-out;
-}
-.copy-btn:hover {
-  background: var(--color-hover);
-  color: var(--color-text);
-}
-.copy-btn.copied {
-  background: var(--tone-green-bg);
-  color: var(--tone-green-fg);
-}
-.copy-done {
-  display: inline-block;
-  animation: copy-fade-in 160ms cubic-bezier(0.215, 0.61, 0.355, 1);
-}
 /* 离线缓存块 meta：状态点（可离线使用=绿点 / 不支持=灰点）+ 安静版本号 */
+.offline-block {
+  display: grid;
+  gap: 8px;
+}
+.offline-block .sub-title {
+  margin: 0;
+}
 .offline-meta {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 13px;
   color: var(--color-muted);
 }
@@ -1576,27 +1465,6 @@ onMounted(() => {
 }
 .offline-dot-off {
   background: var(--color-muted);
-}
-/* 对勾在 2.5s 定时器触发前 400ms 开始淡出，恢复为"复制" */
-.copy-btn.copied .copy-done {
-  animation:
-    copy-fade-in 160ms cubic-bezier(0.215, 0.61, 0.355, 1),
-    copy-fade-out 400ms ease-in 2100ms forwards;
-}
-@keyframes copy-fade-in {
-  from {
-    opacity: 0;
-    transform: scale(0.7);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-@keyframes copy-fade-out {
-  to {
-    opacity: 0;
-  }
 }
 </style>
 <style scoped>

@@ -250,7 +250,7 @@ describe('SettingsView 备份与恢复（M8）/ 退出登录（M9.2）', () => {
     const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
-    const btn = wrapper.find('button.backup-download');
+    const btn = wrapper.find('button.backup-now');
     expect(btn.exists()).toBe(true);
     await btn.trigger('click');
     await flushPromises();
@@ -264,7 +264,7 @@ describe('SettingsView 备份与恢复（M8）/ 退出登录（M9.2）', () => {
     const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
     await flushPromises();
 
-    await wrapper.find('button.backup-download').trigger('click');
+    await wrapper.find('button.backup-now').trigger('click');
     await flushPromises();
     expect(wrapper.find('.backup-error').text()).toContain('下载失败');
   });
@@ -277,7 +277,7 @@ describe('SettingsView 备份与恢复（M8）/ 退出登录（M9.2）', () => {
     await flushPromises();
 
     selectFile(wrapper);
-    await wrapper.find('button.restore-btn').trigger('click');
+    await wrapper.find('input.restore-file').trigger('change');
     await flushPromises();
 
     // 应用内面板出现（而非原生 confirm）
@@ -306,7 +306,7 @@ describe('SettingsView 备份与恢复（M8）/ 退出登录（M9.2）', () => {
     await flushPromises();
 
     const file = selectFile(wrapper);
-    await wrapper.find('button.restore-btn').trigger('click');
+    await wrapper.find('input.restore-file').trigger('change');
     await flushPromises();
 
     const panel = wrapper.find('.panel[role="dialog"]');
@@ -332,7 +332,7 @@ describe('SettingsView 备份与恢复（M8）/ 退出登录（M9.2）', () => {
     expect((wrapper.find('#reminder-hour').element as HTMLSelectElement).value).toBe('8');
 
     selectFile(wrapper);
-    await wrapper.find('button.restore-btn').trigger('click');
+    await wrapper.find('input.restore-file').trigger('change');
     await flushPromises();
     // 应用内面板确认（P2-11 两段式，替代原生 confirm）
     const panel = wrapper.find('.panel[role="dialog"]');
@@ -343,18 +343,6 @@ describe('SettingsView 备份与恢复（M8）/ 退出登录（M9.2）', () => {
     // 恢复成功 → getSettings 再次被调用，表单回填新库设置
     expect(api.getSettings).toHaveBeenCalledTimes(2);
     expect((wrapper.find('#reminder-hour').element as HTMLSelectElement).value).toBe('20');
-  });
-
-  it('未选择文件就点恢复 → 提示且不调用 API', async () => {
-    vi.mocked(api.getSettings).mockResolvedValue(makeSettings());
-    const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
-    await flushPromises();
-
-    await wrapper.find('button.restore-btn').trigger('click');
-    await flushPromises();
-    expect(api.restoreBackup).not.toHaveBeenCalled();
-    expect(wrapper.find('.backup-error').text()).toContain('选择');
   });
 
   it('退出登录：清空本地口令并回登录页', async () => {
@@ -408,75 +396,6 @@ describe('SettingsView 数据概览（充实化）', () => {
     const wrapper = await mountSettings();
     expect(wrapper.find('form.settings-form').exists()).toBe(true);
     expect(wrapper.findAll('.dv-card')[0].text()).toContain('0');
-  });
-});
-
-describe('SettingsView 备份文件名复制（铁律 10 反馈自熄）', () => {
-  async function mountWithBackups() {
-    vi.mocked(api.getSettings).mockResolvedValue(makeSettings());
-    vi.mocked(api.listBackups).mockResolvedValue([
-      { name: 'stock-20261108-020000.db', size: 1024, createdAt: '2026-11-07T18:00:00.000Z' },
-    ]);
-    const router = await makeRouter('/settings');
-    const wrapper = mount(SettingsView, { global: { plugins: [router], stubs: { teleport: true } } });
-    await flushPromises();
-    return wrapper;
-  }
-
-  it('点击复制 → 写剪贴板、对勾出现；2.5s 后自动熄灭恢复为「复制」', async () => {
-    vi.useFakeTimers();
-    try {
-      const writeText = vi.fn().mockResolvedValue(undefined);
-      Object.defineProperty(navigator, 'clipboard', {
-        value: { writeText },
-        configurable: true,
-      });
-      const wrapper = await mountWithBackups();
-
-      const btn = wrapper.find('.copy-btn');
-      expect(btn.exists()).toBe(true);
-      expect(btn.text()).toBe('复制');
-
-      await btn.trigger('click');
-      await flushPromises();
-      expect(writeText).toHaveBeenCalledWith('stock-20261108-020000.db');
-      expect(wrapper.find('.copy-btn').classes()).toContain('copied');
-      // 对勾为 SVG 图标（unslop 打磨轮去字符图形），text 为空、svg 存在
-      expect(wrapper.find('.copy-btn svg').exists()).toBe(true);
-
-      // 2.5s 自熄
-      vi.advanceTimersByTime(2600);
-      await flushPromises();
-      expect(wrapper.find('.copy-btn').classes()).not.toContain('copied');
-      expect(wrapper.find('.copy-btn').text()).toBe('复制');
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('剪贴板不可用 → 不显示成功反馈', async () => {
-    Object.defineProperty(navigator, 'clipboard', {
-      value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
-      configurable: true,
-    });
-    const wrapper = await mountWithBackups();
-    await wrapper.find('.copy-btn').trigger('click');
-    await flushPromises();
-    expect(wrapper.find('.copy-btn').classes()).not.toContain('copied');
-    expect(wrapper.find('.copy-btn').text()).toBe('复制');
-  });
-
-  it('剪贴板不可用（HTTP 非安全上下文）→ 行内错误提示，不再静默（评审 I-7）', async () => {
-    Object.defineProperty(navigator, 'clipboard', {
-      value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
-      configurable: true,
-    });
-    const wrapper = await mountWithBackups();
-    await wrapper.find('.copy-btn').trigger('click');
-    await flushPromises();
-    expect(wrapper.find('.backup-error').exists()).toBe(true);
-    expect(wrapper.find('.backup-error').text()).toContain('复制失败');
-    expect(wrapper.find('.copy-btn').classes()).not.toContain('copied');
   });
 });
 

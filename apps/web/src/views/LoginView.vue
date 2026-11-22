@@ -83,7 +83,6 @@ async function submit(): Promise<void> {
       </button>
     </form>
 
-    <p class="hint">访问口令由部署者设置，仅保存在本机浏览器；验证时随请求头发送，不在服务器留存。</p>
   </div>
 </template>
 
@@ -157,11 +156,5 @@ async function submit(): Promise<void> {
   color: var(--tone-red-fg);
   font-size: 14px;
   margin: 0;
-}
-.hint {
-  margin-top: 18px;
-  color: var(--color-muted);
-  font-size: 12px;
-  line-height: 1.7;
 }
 </style>
